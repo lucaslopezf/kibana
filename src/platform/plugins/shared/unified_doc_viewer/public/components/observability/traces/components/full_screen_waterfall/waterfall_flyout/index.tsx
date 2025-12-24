@@ -17,13 +17,10 @@ import {
   EuiTab,
   EuiTabs,
   EuiTitle,
-  useEuiTheme,
 } from '@elastic/eui';
 import type { DataTableRecord } from '@kbn/discover-utils';
 import { i18n } from '@kbn/i18n';
 import type { DocViewRenderProps } from '@kbn/unified-doc-viewer/types';
-import { layoutVar } from '@kbn/core-chrome-layout-constants';
-import { css } from '@emotion/react';
 import React, { useState } from 'react';
 import DocViewerSource from '../../../../../doc_viewer_source';
 import DocViewerTable from '../../../../../doc_viewer_table';
@@ -90,18 +87,12 @@ export function WaterfallFlyout({
   flyoutId,
 }: Props) {
   const [selectedTabId, setSelectedTabId] = useState(tabIds.OVERVIEW);
-  const { euiTheme } = useEuiTheme();
 
   return (
     <EuiFlyout
       includeFixedHeadersInFocusTrap={false}
+      size="s"
       ownFocus={false}
-      // This is temporary fix until we migrate to the new flyout system to show the complete trace as main flyout instead of full screen
-      // TODO: Remove this once we migrate to the new flyout system: https://github.com/elastic/observability-dev/issues/4980
-      css={css`
-        z-index: ${(euiTheme.levels.mask as number) + 1} !important;
-        margin-top: calc(-1 * ${layoutVar('header.height', '0px')});
-      `}
       onClose={onCloseFlyout}
       aria-labelledby={flyoutId}
       id={flyoutId}
