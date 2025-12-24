@@ -11,7 +11,6 @@ import {
   EuiErrorBoundary,
   EuiFlyout,
   EuiFlyoutBody,
-  EuiFlyoutHeader,
   EuiSkeletonText,
   EuiSkeletonTitle,
   EuiTab,
@@ -90,19 +89,13 @@ export function WaterfallFlyout({
 
   return (
     <EuiFlyout
+      size="s"
       includeFixedHeadersInFocusTrap={false}
       ownFocus={false}
       onClose={onCloseFlyout}
-      aria-labelledby={flyoutId}
+      aria-label={title}
       id={flyoutId}
     >
-      <EuiFlyoutHeader hasBorder>
-        <EuiSkeletonTitle isLoading={loading}>
-          <EuiTitle size="m">
-            <h2>{title}</h2>
-          </EuiTitle>
-        </EuiSkeletonTitle>
-      </EuiFlyoutHeader>
       <EuiFlyoutBody>
         {loading || !hit ? (
           <EuiSkeletonText lines={5} />
