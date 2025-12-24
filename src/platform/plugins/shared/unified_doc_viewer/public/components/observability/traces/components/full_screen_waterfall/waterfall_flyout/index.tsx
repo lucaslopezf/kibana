@@ -91,7 +91,6 @@ export function WaterfallFlyout({
   return (
     <EuiFlyout
       includeFixedHeadersInFocusTrap={false}
-      size="s"
       ownFocus={false}
       onClose={onCloseFlyout}
       aria-labelledby={flyoutId}

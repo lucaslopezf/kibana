@@ -7,7 +7,14 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
-import { EuiFlyout, EuiFlyoutBody, EuiFlyoutHeader, EuiTitle } from '@elastic/eui';
+import {
+  EuiFlyout,
+  EuiFlyoutBody,
+  EuiFlyoutHeader,
+  EuiTitle,
+  useGeneratedHtmlId,
+  useEuiTheme,
+} from '@elastic/eui';
 import { EmbeddableRenderer } from '@kbn/embeddable-plugin/public';
 import { i18n } from '@kbn/i18n';
 import type { DocViewRenderProps } from '@kbn/unified-doc-viewer/types';
@@ -35,11 +42,18 @@ export const FullScreenWaterfall = ({
   serviceName,
   onExitFullScreen,
 }: FullScreenWaterfallProps) => {
+  const { euiTheme } = useEuiTheme();
   const [docId, setDocId] = useState<string | null>(null);
   const [activeFlyoutId, setActiveFlyoutId] = useState<
     typeof spanFlyoutIdType | typeof logsFlyoutIdType | null
   >(null);
   const [activeSection, setActiveSection] = useState<TraceOverviewSections | undefined>();
+
+  const traceWaterfallTitleId = useGeneratedHtmlId({
+    prefix: 'traceWaterfallTitle',
+  });
+
+  const minWidth = euiTheme.base * 30;
 
   const getParentApi = useCallback(
     () => ({
@@ -87,13 +101,13 @@ export const FullScreenWaterfall = ({
       session="start"
       size="m"
       onClose={onExitFullScreen}
-      aria-labelledby="traceWaterfallTitle"
-      data-test-subj="fullScreenTraceFlyout"
+      aria-labelledby={traceWaterfallTitleId}
       resizable={true}
+      minWidth={minWidth}
     >
       <EuiFlyoutHeader>
         <EuiTitle size="l">
-          <h2>
+          <h2 id={traceWaterfallTitleId}>
             {i18n.translate('unifiedDocViewer.observability.traces.fullScreenWaterfall.title', {
               defaultMessage: 'Trace timeline',
             })}
