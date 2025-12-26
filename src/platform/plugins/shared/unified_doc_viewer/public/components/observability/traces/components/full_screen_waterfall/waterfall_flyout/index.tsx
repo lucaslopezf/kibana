@@ -12,10 +12,8 @@ import {
   EuiFlyout,
   EuiFlyoutBody,
   EuiSkeletonText,
-  EuiSkeletonTitle,
   EuiTab,
   EuiTabs,
-  EuiTitle,
 } from '@elastic/eui';
 import type { DataTableRecord } from '@kbn/discover-utils';
 import { i18n } from '@kbn/i18n';
@@ -89,7 +87,6 @@ export function WaterfallFlyout({
 
   return (
     <EuiFlyout
-      size="s"
       includeFixedHeadersInFocusTrap={false}
       ownFocus={false}
       onClose={onCloseFlyout}
