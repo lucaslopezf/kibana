@@ -56,6 +56,13 @@ export const FullScreenWaterfall = ({
     prefix: 'traceWaterfallTitle',
   });
 
+  const traceWaterfallTitle = i18n.translate(
+    'unifiedDocViewer.observability.traces.fullScreenWaterfall.title',
+    {
+      defaultMessage: 'Trace timeline',
+    }
+  );
+
   const minWidth = euiTheme.base * 30;
 
   /**
@@ -123,16 +130,15 @@ export const FullScreenWaterfall = ({
       size="m"
       onClose={onExitFullScreen}
       aria-labelledby={traceWaterfallTitleId}
+      flyoutMenuProps={{
+        title: traceWaterfallTitle,
+      }}
       resizable={true}
       minWidth={minWidth}
     >
       <EuiFlyoutHeader>
         <EuiTitle size="l">
-          <h2 id={traceWaterfallTitleId}>
-            {i18n.translate('unifiedDocViewer.observability.traces.fullScreenWaterfall.title', {
-              defaultMessage: 'Trace timeline',
-            })}
-          </h2>
+          <h2 id={traceWaterfallTitleId}>{traceWaterfallTitle}</h2>
         </EuiTitle>
       </EuiFlyoutHeader>
       <EuiFlyoutBody>
