@@ -25,6 +25,8 @@ import { SpanFlyout, spanFlyoutId } from './waterfall_flyout/span_flyout';
 import type { logsFlyoutId as logsFlyoutIdType } from './waterfall_flyout/logs_flyout';
 import { LogsFlyout, logsFlyoutId } from './waterfall_flyout/logs_flyout';
 
+export const EUI_FLYOUT_BODY_OVERFLOW_CLASS = 'euiFlyoutBody__overflow';
+
 export interface FullScreenWaterfallProps {
   traceId: string;
   rangeFrom: string;
@@ -48,6 +50,7 @@ export const FullScreenWaterfall = ({
     typeof spanFlyoutIdType | typeof logsFlyoutIdType | null
   >(null);
   const [activeSection, setActiveSection] = useState<TraceOverviewSections | undefined>();
+  const [scrollElement, setScrollElement] = useState<Element | null>(null);
 
   const traceWaterfallTitleId = useGeneratedHtmlId({
     prefix: 'traceWaterfallTitle',
@@ -55,14 +58,33 @@ export const FullScreenWaterfall = ({
 
   const minWidth = euiTheme.base * 30;
 
-  const getParentApi = useCallback(
-    () => ({
+  /**
+   * Obtains the EUI flyout scroll container for the trace waterfall embeddable.
+   *
+   * This pattern is necessary because:
+   * - Embeddables are constructed once with immutable initial state
+   * - EUI components don't expose refs, requiring a wrapper div with closest()
+   * - scrollElement must be available before the embeddable initializes (conditional render below)
+   *
+   * TODO (Future improvement): If EUI exposes refs or provides a scrollRef prop, this workaround
+   * can be replaced with a direct ref.
+   */
+  const embeddableContainerRef = useCallback((node: HTMLDivElement | null) => {
+    if (node) {
+      const scrollContainer = node.closest(`.${EUI_FLYOUT_BODY_OVERFLOW_CLASS}`);
+      setScrollElement(scrollContainer);
+    }
+  }, []);
+
+  const getParentApi = useCallback(() => {
+    return {
       getSerializedStateForChild: () => ({
         rawState: {
           traceId,
           rangeFrom,
           rangeTo,
           serviceName,
+          scrollElement,
           onErrorClick: (params: {
             traceId: string;
             docId: string;
@@ -86,9 +108,8 @@ export const FullScreenWaterfall = ({
           mode: 'full',
         },
       }),
-    }),
-    [traceId, rangeFrom, rangeTo, serviceName]
-  );
+    };
+  }, [traceId, rangeFrom, rangeTo, serviceName, scrollElement]);
 
   function handleCloseFlyout() {
     setActiveFlyoutId(null);
@@ -115,11 +136,15 @@ export const FullScreenWaterfall = ({
         </EuiTitle>
       </EuiFlyoutHeader>
       <EuiFlyoutBody>
-        <EmbeddableRenderer
-          type="APM_TRACE_WATERFALL_EMBEDDABLE"
-          getParentApi={getParentApi}
-          hidePanelChrome
-        />
+        <div ref={embeddableContainerRef}>
+          {scrollElement ? (
+            <EmbeddableRenderer
+              type="APM_TRACE_WATERFALL_EMBEDDABLE"
+              getParentApi={getParentApi}
+              hidePanelChrome
+            />
+          ) : null}
+        </div>
       </EuiFlyoutBody>
 
       {docId && activeFlyoutId ? (
