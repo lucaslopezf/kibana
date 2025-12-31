@@ -180,6 +180,32 @@ function TraceTree() {
   const listRef = useRef<List>(null);
   const rowSizeMapRef = useRef(new Map<number, number>());
 
+  // DEBUG: Detect native scroll events on react-window's internal container
+  useEffect(() => {
+    const checkAndAttach = () => {
+      const outerRef = (listRef.current as any)?._outerRef;
+      if (!outerRef) {
+        setTimeout(checkAndAttach, 100);
+        return;
+      }
+
+      const handleOuterRefScroll = () => {
+        console.log('[SCROLL_DEBUG] Native scroll on List container');
+        console.log('[SCROLL_DEBUG] _outerRef.scrollTop:', outerRef.scrollTop);
+        console.trace('[SCROLL_DEBUG] Stack trace:');
+      };
+
+      outerRef.addEventListener('scroll', handleOuterRefScroll);
+      (listRef.current as any)._debugCleanup = () => {
+        outerRef.removeEventListener('scroll', handleOuterRefScroll);
+      };
+    };
+
+    checkAndAttach();
+    const currentListRef = listRef.current;
+    return () => (currentListRef as any)?._debugCleanup?.();
+  }, []);
+
   const onRowLoad = (index: number, size: number) => {
     rowSizeMapRef.current.set(index, size);
   };
@@ -190,6 +216,19 @@ function TraceTree() {
 
   const onScroll = ({ scrollTop }: { scrollTop: number }) => {
     listRef.current?.scrollTo(scrollTop);
+
+    // DEBUG: Detect scroll offset mismatch after React update
+    setTimeout(() => {
+      const stateScrollOffset = (listRef.current as any)?.state?.scrollOffset;
+      if (stateScrollOffset !== scrollTop) {
+        console.error(
+          '[SCROLL_DEBUG] Offset mismatch: expected',
+          scrollTop,
+          'got',
+          stateScrollOffset
+        );
+      }
+    }, 0);
   };
 
   const visibleList = useMemo(
@@ -204,7 +243,7 @@ function TraceTree() {
         scrollElement ?? document.getElementById(APP_MAIN_SCROLL_CONTAINER_ID) ?? undefined
       }
     >
-      {({ registerChild }) => (
+      {({ registerChild, height: wsHeight, scrollTop: wsScrollTop, isScrolling }) => (
         <AutoSizer disableHeight>
           {({ width }) => (
             <div data-test-subj="waterfall" ref={registerChild}>
@@ -221,6 +260,28 @@ function TraceTree() {
                   traceWaterfallMap,
                   accordionStatesMap,
                   toggleAccordionState,
+                }}
+                onItemsRendered={({ overscanStartIndex, overscanStopIndex }) => {
+                  // DEBUG: Detect scroll reset bug
+                  const scrollOffset = (listRef.current as any)?.state?.scrollOffset;
+
+                  console.log(
+                    '[SCROLL_DEBUG] Rendered items:',
+                    overscanStartIndex,
+                    '-',
+                    overscanStopIndex,
+                    '| state.scrollOffset:',
+                    scrollOffset,
+                    '| wsScrollTop:',
+                    wsScrollTop
+                  );
+
+                  if (overscanStartIndex === 0 && scrollOffset === 0 && wsScrollTop > 100) {
+                    console.error(
+                      '[SCROLL_DEBUG] BUG: scrollOffset reset to 0 while wsScrollTop =',
+                      wsScrollTop
+                    );
+                  }
                 }}
               >
                 {VirtualRow}
