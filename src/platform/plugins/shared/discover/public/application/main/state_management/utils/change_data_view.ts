@@ -25,6 +25,7 @@ import {
   type TabActionInjector,
   type TabState,
 } from '../redux';
+import { DEBUG_FLYOUT } from '../../components/layout/debug_flyout';
 
 /**
  * Function executed when switching data view in the UI
@@ -100,6 +101,11 @@ export async function changeDataView({
     );
 
     if (internalState.getState().expandedDoc) {
+      // ===== DEBUG: Track change_data_view reset =====
+      DEBUG_FLYOUT.trackReduxAction('change_data_view.ts - Resetting expandedDoc!', {
+        reason: 'DataView changed in changeDataView util',
+      });
+      // ===== END DEBUG =====
       internalState.dispatch(internalStateActions.setExpandedDoc({ expandedDoc: undefined }));
     }
   }

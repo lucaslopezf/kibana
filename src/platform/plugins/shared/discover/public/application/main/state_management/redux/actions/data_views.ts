@@ -16,6 +16,7 @@ import {
 } from '../internal_state';
 import { selectTabRuntimeState } from '../runtime_state';
 import { createInternalStateAsyncThunk } from '../utils';
+import { DEBUG_FLYOUT } from '../../../components/layout/debug_flyout';
 
 export const loadDataViewList = createInternalStateAsyncThunk(
   'internalState/loadDataViewList',
@@ -30,6 +31,12 @@ export const setDataView: InternalStateThunkActionCreator<
     const { currentDataView$ } = selectTabRuntimeState(runtimeStateManager, tabId);
 
     if (dataView.id !== currentDataView$.getValue()?.id) {
+      // ===== DEBUG: Track setDataView reset =====
+      DEBUG_FLYOUT.trackReduxAction('setDataView - DataView CHANGED, resetting expandedDoc!', {
+        previousDataViewId: currentDataView$.getValue()?.id,
+        newDataViewId: dataView.id,
+      });
+      // ===== END DEBUG =====
       dispatch(internalStateSlice.actions.setExpandedDoc({ expandedDoc: undefined }));
     }
 

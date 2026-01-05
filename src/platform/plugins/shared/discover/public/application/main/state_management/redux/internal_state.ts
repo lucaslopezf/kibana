@@ -28,6 +28,7 @@ import type { IKbnUrlStateStorage } from '@kbn/kibana-utils-plugin/public';
 import type { ESQLControlVariable } from '@kbn/esql-types';
 import type { DiscoverSession } from '@kbn/saved-search-plugin/common';
 import { isOfAggregateQueryType } from '@kbn/es-query';
+import { DEBUG_FLYOUT } from '../../components/layout/debug_flyout';
 import type { DiscoverCustomizationContext } from '../../../../customizations';
 import type { DiscoverServices } from '../../../../build_services';
 import { type RuntimeStateManager, selectTabRuntimeInternalState } from './runtime_state';
@@ -170,11 +171,30 @@ export const internalStateSlice = createSlice({
         initialDocViewerTabId?: string;
       }>
     ) => {
+      // ===== DEBUG: Track setExpandedDoc =====
+      const isReset = !action.payload.expandedDoc && state.expandedDoc;
+      if (isReset) {
+        DEBUG_FLYOUT.trackReduxReset('setExpandedDoc', {
+          newValue: 'undefined',
+          previousValue: 'DOCUMENT',
+        });
+      } else {
+        DEBUG_FLYOUT.trackReduxAction('setExpandedDoc', {
+          newValue: action.payload.expandedDoc ? 'DOCUMENT' : 'undefined',
+          previousValue: state.expandedDoc ? 'DOCUMENT' : 'undefined',
+        });
+      }
+      // ===== END DEBUG =====
       state.expandedDoc = action.payload.expandedDoc;
       state.initialDocViewerTabId = action.payload.initialDocViewerTabId;
     },
 
     discardFlyoutsOnTabChange: (state) => {
+      // ===== DEBUG: Track discardFlyoutsOnTabChange =====
+      DEBUG_FLYOUT.trackReduxAction('discardFlyoutsOnTabChange CALLED!', {
+        previousExpandedDoc: state.expandedDoc ? 'DOCUMENT' : 'undefined',
+      });
+      // ===== END DEBUG =====
       state.expandedDoc = undefined;
       state.initialDocViewerTabId = undefined;
     },
@@ -270,6 +290,12 @@ export const internalStateSlice = createSlice({
 
     resetOnSavedSearchChange: (state, action: TabAction) =>
       withTab(state, action.payload, (tab) => {
+        // ===== DEBUG: Track resetOnSavedSearchChange =====
+        DEBUG_FLYOUT.trackReduxAction('resetOnSavedSearchChange CALLED!', {
+          tabId: action.payload.tabId,
+          previousExpandedDoc: state.expandedDoc ? 'DOCUMENT' : 'undefined',
+        });
+        // ===== END DEBUG =====
         tab.overriddenVisContextAfterInvalidation = undefined;
         state.expandedDoc = undefined;
         state.initialDocViewerTabId = undefined;

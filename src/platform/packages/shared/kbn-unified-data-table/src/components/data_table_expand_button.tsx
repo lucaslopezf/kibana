@@ -63,6 +63,22 @@ export const ExpandButton = (props: EuiDataGridCellValueElementProps) => {
         aria-label={buttonLabel}
         data-test-subj={testSubj}
         onClick={() => {
+          // ===== DEBUG: Track expand button click =====
+          // eslint-disable-next-line no-console
+          console.log(
+            '%c[FLYOUT_DEBUG] ExpandButton CLICK',
+            'color: #FFD700; font-weight: bold; font-size: 14px',
+            {
+              isCurrentRowExpanded,
+              recordId: record?.id,
+              expandedId: expanded?.id,
+              recordRef: record,
+              expandedRef: expanded,
+              sameReference: record === expanded,
+              nextHitWillBe: isCurrentRowExpanded ? 'undefined (CLOSE)' : 'record (OPEN)',
+            }
+          );
+          // ===== END DEBUG =====
           const nextHit = isCurrentRowExpanded ? undefined : record;
           toolTipRef.current?.hideToolTip();
           setPressed(Boolean(nextHit));

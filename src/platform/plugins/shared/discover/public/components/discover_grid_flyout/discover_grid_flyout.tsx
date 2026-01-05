@@ -7,7 +7,7 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useLayoutEffect, useEffect, useMemo } from 'react';
 import type { DataView } from '@kbn/data-views-plugin/public';
 import type { AggregateQuery, Filter, Query } from '@kbn/es-query';
 import { isOfAggregateQueryType } from '@kbn/es-query';
@@ -23,6 +23,7 @@ import { useDiscoverCustomization } from '../../customizations';
 import { DiscoverGridFlyoutActions } from './discover_grid_flyout_actions';
 import type { DocViewerExtensionParams } from '../../context_awareness';
 import { useProfileAccessor } from '../../context_awareness';
+import { DEBUG_FLYOUT } from '../../application/main/components/layout/debug_flyout';
 
 export const FLYOUT_WIDTH_KEY = 'discover:flyoutWidth';
 
@@ -100,6 +101,17 @@ export function DiscoverGridFlyout({
   useEffect(() => {
     dismissAllFlyoutsExceptFor(DiscoverFlyouts.docViewer);
   }, []);
+
+  // ===== DEBUG: Track mount/unmount =====
+  useLayoutEffect(() => {
+    DEBUG_FLYOUT.trackMount('DiscoverGridFlyout', { hitId: hit?.id, timestamp: Date.now() });
+    return () => {
+      DEBUG_FLYOUT.trackUnmount('DiscoverGridFlyout', { hitId: hit?.id, timestamp: Date.now() });
+    };
+  }, [hit?.id]);
+
+  DEBUG_FLYOUT.log('render', 'DiscoverGridFlyout RENDER', { hitId: hit?.id });
+  // ===== END DEBUG =====
 
   return (
     <UnifiedDocViewerFlyout
