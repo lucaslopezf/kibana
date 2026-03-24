@@ -58,7 +58,10 @@ export function replaceFunctionParams(functionString: string, params: Params): s
         tempQuery.setParam(key, synth.col(columnParts));
       } else {
         // ? placeholders represent literal values
-        tempQuery.setParam(key, typeof value === 'number' || typeof value === 'boolean' ? value : strValue);
+        tempQuery.setParam(
+          key,
+          typeof value === 'number' || typeof value === 'boolean' ? value : strValue
+        );
       }
     }
     tempQuery.inlineParams();
