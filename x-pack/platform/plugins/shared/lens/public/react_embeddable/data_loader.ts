@@ -12,6 +12,7 @@ import type {
   GetStateType,
   LensInternalApi,
   LensPublicCallbacks,
+  LensUserMessagesContext,
   SharingSavedObjectProps,
   UserMessagesDisplayLocationId,
 } from '@kbn/lens-common';
@@ -49,7 +50,7 @@ import {
   updateAttributesWithAnnotation,
 } from './helper';
 import { addLog } from './logger';
-import { apiHasLensComponentCallbacks, apiHasUserMessages } from './type_guards';
+import { apiHasGetUserMessages, apiHasLensComponentCallbacks, apiHasUserMessages } from './type_guards';
 import type { LensEmbeddableStartServices } from './types';
 import { buildUserMessagesHelpers } from './user_messages/api';
 
@@ -111,8 +112,13 @@ export function loadEmbeddableData(
     ? parentApi
     : ({} as LensPublicCallbacks);
 
-  const getConsumerMessages = () =>
-    apiHasUserMessages(parentApi) ? parentApi.userMessages ?? [] : [];
+  const getConsumerMessages = (context: LensUserMessagesContext) => {
+    const staticMessages = apiHasUserMessages(parentApi) ? parentApi.userMessages ?? [] : [];
+    const dynamicMessages = apiHasGetUserMessages(parentApi)
+      ? parentApi.getUserMessages(context) ?? []
+      : [];
+    return [...staticMessages, ...dynamicMessages];
+  };
 
   // Some convenience api for the user messaging
   const {

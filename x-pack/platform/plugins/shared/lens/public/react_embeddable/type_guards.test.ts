@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-import { apiHasUserMessages } from './type_guards';
+import { apiHasGetUserMessages, apiHasUserMessages } from './type_guards';
 
 describe('apiHasUserMessages', () => {
   const message = {
@@ -43,5 +43,32 @@ describe('apiHasUserMessages', () => {
 
   it.each(invalidCases)('returns false for $label', ({ input }) => {
     expect(apiHasUserMessages(input)).toBe(false);
+  });
+});
+
+describe('apiHasGetUserMessages', () => {
+  const getUserMessages = jest.fn(() => []);
+
+  const validCases = [
+    { input: { getUserMessages }, label: 'function getter' },
+    { input: { getUserMessages, userMessages: [] }, label: 'getter alongside static messages' },
+  ];
+
+  const invalidCases = [
+    { input: null, label: 'null' },
+    { input: undefined, label: 'undefined' },
+    { input: {}, label: 'empty object' },
+    { input: { getUserMessages: [] }, label: 'non-function getter' },
+    { input: { userMessages: [] }, label: 'object without getUserMessages property' },
+    { input: 0, label: 'number primitive' },
+    { input: '', label: 'string primitive' },
+  ];
+
+  it.each(validCases)('returns true for $label', ({ input }) => {
+    expect(apiHasGetUserMessages(input)).toBe(true);
+  });
+
+  it.each(invalidCases)('returns false for $label', ({ input }) => {
+    expect(apiHasGetUserMessages(input)).toBe(false);
   });
 });

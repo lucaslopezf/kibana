@@ -8,7 +8,7 @@
  */
 
 import { i18n } from '@kbn/i18n';
-import type { UserMessage } from '@kbn/lens-plugin/public';
+import type { LensUserMessagesContext, UserMessage } from '@kbn/lens-common';
 
 export const LEGACY_HISTOGRAM_USER_MESSAGES: UserMessage[] = [
   {
@@ -25,3 +25,41 @@ export const LEGACY_HISTOGRAM_USER_MESSAGES: UserMessage[] = [
     displayLocations: [{ id: 'embeddableBadge' }],
   },
 ];
+
+export const COUNTER_SHORT_RANGE_USER_MESSAGES: UserMessage[] = [
+  {
+    uniqueId: 'metrics-experience-counter-short-range-warning',
+    severity: 'warning',
+    shortMessage: i18n.translate('metricsExperience.userMessage.counterShortRange.short', {
+      defaultMessage: 'Possible incomplete data',
+    }),
+    longMessage: i18n.translate('metricsExperience.userMessage.counterShortRange.long', {
+      defaultMessage:
+        'Counter metrics use RATE(), which needs at least 2 data points per time bucket. Short time ranges may produce empty results. Try widening the time range.',
+    }),
+    fixableInEditor: false,
+    displayLocations: [{ id: 'embeddableBadge' }],
+  },
+];
+
+export const getNoDataUserMessages = ({ activeData }: LensUserMessagesContext): UserMessage[] => {
+  if (!activeData) {
+    return [];
+  }
+
+  const hasAnyData = Object.values(activeData).some((table) => {
+    if (table.rows.length === 0) {
+      return false;
+    }
+
+    const metricColumns = table.columns.filter((column) => column.meta.dimensionType === 'y');
+
+    if (metricColumns.length === 0) {
+      return true;
+    }
+
+    return table.rows.some((row) => metricColumns.some((column) => row[column.id] != null));
+  });
+
+  return hasAnyData ? [] : COUNTER_SHORT_RANGE_USER_MESSAGES;
+};

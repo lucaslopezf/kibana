@@ -36,6 +36,7 @@ export type MetricsGridProps = Pick<
   metricItems: ParsedMetricItem[];
   whereStatements?: string[];
   getUserMessages?: (metricItem: ParsedMetricItem) => EmbeddableComponentProps['userMessages'];
+  getLensUserMessages?: EmbeddableComponentProps['getUserMessages'];
 };
 
 const getItemKey = (metricItem: ParsedMetricItem, index: number) => {
@@ -54,6 +55,7 @@ export const MetricsGrid = ({
   discoverFetch$,
   searchTerm,
   getUserMessages,
+  getLensUserMessages,
 }: MetricsGridProps) => {
   const gridRef = useRef<HTMLDivElement>(null);
   const { euiTheme } = useEuiTheme();
@@ -158,6 +160,7 @@ export const MetricsGrid = ({
                   searchTerm={searchTerm}
                   whereStatements={whereStatements}
                   userMessages={getUserMessages ? getUserMessages(metricItem) : undefined}
+                  getLensUserMessages={getLensUserMessages}
                 />
               </EuiFlexItem>
             );
@@ -194,6 +197,7 @@ interface ChartItemProps
   onViewDetails: (index: number, esqlQuery: string, metricItem: ParsedMetricItem) => void;
   whereStatements?: string[];
   userMessages?: EmbeddableComponentProps['userMessages'];
+  getLensUserMessages?: EmbeddableComponentProps['getUserMessages'];
 }
 
 const ChartItem = React.memo(
@@ -217,6 +221,7 @@ const ChartItem = React.memo(
     onFocusCell,
     onViewDetails,
     userMessages,
+    getLensUserMessages,
   }: ChartItemProps) => {
     const { euiTheme } = useEuiTheme();
     const colorPalette = useMemo(
@@ -267,6 +272,7 @@ const ChartItem = React.memo(
           titleHighlight={searchTerm}
           extraDisabledActions={[ACTION_OPEN_IN_DISCOVER]}
           userMessages={userMessages}
+          getUserMessages={getLensUserMessages}
         />
       </A11yGridCell>
     );

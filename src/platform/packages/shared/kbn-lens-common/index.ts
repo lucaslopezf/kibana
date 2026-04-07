@@ -277,6 +277,7 @@ export type {
   ViewInDiscoverCallbacks,
   IntegrationCallbacks,
   LensPublicCallbacks,
+  LensUserMessagesContext,
   LensApiCallbacks,
   LensUnifiedSearchContext,
   LensPanelProps,

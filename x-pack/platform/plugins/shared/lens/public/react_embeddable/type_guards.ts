@@ -15,6 +15,7 @@ import type {
   LensApiCallbacks,
   LensPublicCallbacks,
   LensComponentForwardedProps,
+  LensUserMessagesContext,
   UserMessage,
 } from '@kbn/lens-common';
 import type { LensApi } from '@kbn/lens-common-2';
@@ -43,14 +44,25 @@ export const isLensApi = (api: unknown): api is LensApi => {
 export function apiHasLensComponentCallbacks(api: unknown): api is LensPublicCallbacks {
   return (
     isObject(api) &&
-    ['onFilter', 'onBrushEnd', 'onLoad', 'onTableRowClick', 'onBeforeBadgesRender'].some((fn) =>
-      Object.hasOwn(api, fn)
-    )
+    [
+      'onFilter',
+      'onBrushEnd',
+      'onLoad',
+      'onTableRowClick',
+      'onBeforeBadgesRender',
+      'getUserMessages',
+    ].some((fn) => Object.hasOwn(api, fn))
   );
 }
 
 export function apiHasUserMessages(api: unknown): api is { userMessages?: UserMessage[] } {
   return isObject(api) && Object.hasOwn(api, 'userMessages');
+}
+
+export function apiHasGetUserMessages(
+  api: unknown
+): api is { getUserMessages: (context: LensUserMessagesContext) => UserMessage[] } {
+  return isObject(api) && typeof (api as { getUserMessages?: unknown }).getUserMessages === 'function';
 }
 
 export function apiHasLensComponentProps(api: unknown): api is LensComponentForwardedProps {

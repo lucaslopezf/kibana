@@ -17,6 +17,7 @@ import type {
   Datasource,
   SharingSavedObjectProps,
   UserMessage,
+  LensUserMessagesContext,
   Visualization,
   UserMessagesDisplayLocationId,
 } from '@kbn/lens-common';
@@ -58,7 +59,7 @@ function buildUserMessagesApi(
   }: {
     visOverrides?: { id: string } & Partial<Visualization>;
     dataOverrides?: { id: string } & Partial<Datasource>;
-    getConsumerMessages?: () => UserMessage[];
+    getConsumerMessages?: (context: LensUserMessagesContext) => UserMessage[];
   } = {
     visOverrides: { id: 'lnsXY' },
     dataOverrides: { id: 'formBased' },
@@ -299,7 +300,7 @@ describe('User Messages API', () => {
     });
 
     it('should not add consumer messages when getConsumerMessages returns empty array', () => {
-      const getConsumerMessages = jest.fn(() => []);
+      const getConsumerMessages = jest.fn((_context: LensUserMessagesContext) => []);
       const { userMessagesApi } = buildUserMessagesApi(undefined, {
         visOverrides: { id: 'lnsXY' },
         dataOverrides: { id: 'formBased' },
@@ -309,12 +310,12 @@ describe('User Messages API', () => {
       const result = userMessagesApi.getUserMessages('embeddableBadge');
 
       expect(result).toHaveLength(0);
-      expect(getConsumerMessages).toHaveBeenCalled();
+      expect(getConsumerMessages).toHaveBeenCalledWith({ activeData: undefined });
     });
 
     it('should filter consumer and internal messages based on severity', () => {
       const consumerMessage = createUserMessage(['embeddableBadge'], 'info');
-      const getConsumerMessages = jest.fn(() => [consumerMessage]);
+      const getConsumerMessages = jest.fn((_context: LensUserMessagesContext) => [consumerMessage]);
       const { userMessagesApi } = buildUserMessagesApi(undefined, {
         visOverrides: { id: 'lnsXY' },
         dataOverrides: { id: 'formBased' },
@@ -326,7 +327,7 @@ describe('User Messages API', () => {
       const result = userMessagesApi.getUserMessages('embeddableBadge');
 
       expect(result).toHaveLength(2);
-      expect(getConsumerMessages).toHaveBeenCalled();
+      expect(getConsumerMessages).toHaveBeenCalledWith({ activeData: undefined });
 
       expect(result[0]).toEqual(expect.objectContaining({ uniqueId: internalMessage.uniqueId }));
       expect(result[1]).toEqual(expect.objectContaining({ uniqueId: consumerMessage.uniqueId }));
@@ -334,7 +335,7 @@ describe('User Messages API', () => {
 
     it('should return only consumer messages when no internal messages', () => {
       const consumerMessage = createUserMessage(['embeddableBadge'], 'error');
-      const getConsumerMessages = jest.fn(() => [consumerMessage]);
+      const getConsumerMessages = jest.fn((_context: LensUserMessagesContext) => [consumerMessage]);
       const { userMessagesApi } = buildUserMessagesApi(undefined, {
         visOverrides: { id: 'lnsXY' },
         dataOverrides: { id: 'formBased' },
@@ -349,7 +350,7 @@ describe('User Messages API', () => {
     it('when consumer and internal share the same uniqueId, both appear in the result (no dedupe)', () => {
       const sharedId = 'shared-message-id';
       const consumerMessage = createUserMessage(['embeddableBadge'], 'error', sharedId);
-      const getConsumerMessages = jest.fn(() => [consumerMessage]);
+      const getConsumerMessages = jest.fn((_context: LensUserMessagesContext) => [consumerMessage]);
       const { userMessagesApi } = buildUserMessagesApi(undefined, {
         visOverrides: { id: 'lnsXY' },
         dataOverrides: { id: 'formBased' },
@@ -365,7 +366,7 @@ describe('User Messages API', () => {
     it('should return multiple consumer messages', () => {
       const msg1 = createUserMessage(['embeddableBadge'], 'info');
       const msg2 = createUserMessage(['embeddableBadge'], 'warning');
-      const getConsumerMessages = jest.fn(() => [msg1, msg2]);
+      const getConsumerMessages = jest.fn((_context: LensUserMessagesContext) => [msg1, msg2]);
       const { userMessagesApi } = buildUserMessagesApi(undefined, {
         visOverrides: { id: 'lnsXY' },
         dataOverrides: { id: 'formBased' },

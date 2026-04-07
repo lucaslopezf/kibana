@@ -173,6 +173,10 @@ export interface IntegrationCallbacks extends LensApiProps {
   getTriggerCompatibleActions: (triggerId: string, context: object) => Promise<Action[]>;
 }
 
+export interface LensUserMessagesContext {
+  activeData?: TableInspectorAdapter;
+}
+
 /**
  * Public Callbacks are function who are exposed thru the Lens custom renderer component,
  * so not directly exposed in the Lens API, rather passed down as parentApi to the Lens Embeddable
@@ -198,6 +202,10 @@ export interface LensPublicCallbacks extends LensApiProps {
    * Optional user messages from the consumer.
    */
   userMessages?: UserMessage[];
+  /**
+   * Optional user messages getter from the consumer, computed at runtime based on the current context.
+   */
+  getUserMessages?: (context: LensUserMessagesContext) => UserMessage[];
   onAlertRule?: (data: unknown) => void;
 }
 

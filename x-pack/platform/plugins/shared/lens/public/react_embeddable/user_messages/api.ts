@@ -12,6 +12,7 @@ import type {
   FramePublicAPI,
   SharingSavedObjectProps,
   LensPublicCallbacks,
+  LensUserMessagesContext,
   VisualizationContextHelper,
   LensInternalApi,
 } from '@kbn/lens-common';
@@ -98,7 +99,7 @@ export function buildUserMessagesHelpers(
   { coreStart, data, visualizationMap, datasourceMap, spaces }: LensEmbeddableStartServices,
   onBeforeBadgesRender: LensPublicCallbacks['onBeforeBadgesRender'],
   metaInfo?: SharingSavedObjectProps,
-  getConsumerMessages?: () => UserMessage[]
+  getConsumerMessages?: (context: LensUserMessagesContext) => UserMessage[]
 ): {
   getUserMessages: UserMessagesGetter;
   addUserMessages: (messages: UserMessage[]) => void;
@@ -218,7 +219,7 @@ export function buildUserMessagesHelpers(
       }) ?? [])
     );
 
-    const consumerMessages = getConsumerMessages?.() ?? [];
+    const consumerMessages = getConsumerMessages?.({ activeData }) ?? [];
 
     // When an internal error occurs (block chart rendering), the consumer message is not displayed.
     userMessages.push(...consumerMessages);

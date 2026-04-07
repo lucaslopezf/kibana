@@ -171,6 +171,25 @@ describe('MetricsGrid', () => {
     );
   });
 
+  it('passes getLensUserMessages to each chart when provided', () => {
+    const getLensUserMessages = jest.fn(() => []);
+
+    renderMetricsGrid({ getLensUserMessages });
+
+    expect(getLensUserMessages).not.toHaveBeenCalled();
+
+    expect(Chart).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ getUserMessages: getLensUserMessages }),
+      expect.anything()
+    );
+    expect(Chart).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ getUserMessages: getLensUserMessages }),
+      expect.anything()
+    );
+  });
+
   it('handles multiple dimensions correctly in ESQL query and chart layers', () => {
     const multipleDimensions = [
       { name: 'host.name' },
