@@ -7,7 +7,38 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
+import type { ReactNode } from 'react';
+import type { SelectableEntry } from '@kbn/shared-ux-toolbar-selector';
 import type { Dimension, ParsedMetricItem } from '../../types';
+
+export type DimensionEntry = SelectableEntry & { dimension: Dimension };
+
+interface BuildDimensionOptionParams {
+  dimension: Dimension;
+  isSelected: boolean;
+  isDisabled: boolean;
+  appendNode?: ReactNode;
+}
+
+export const buildDimensionOption = ({
+  dimension,
+  isSelected,
+  isDisabled,
+  appendNode,
+}: BuildDimensionOptionParams): DimensionEntry => {
+  const option: DimensionEntry = {
+    value: dimension.name,
+    label: dimension.name,
+    checked: isSelected ? 'on' : undefined,
+    disabled: isDisabled,
+    key: dimension.name,
+    dimension,
+  };
+  if (appendNode) {
+    option.append = appendNode;
+  }
+  return option;
+};
 
 interface OptionDisabledStateParams {
   singleSelection: boolean;
