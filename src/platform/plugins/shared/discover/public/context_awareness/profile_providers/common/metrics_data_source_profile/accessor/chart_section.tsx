@@ -29,7 +29,7 @@ import { useDiscoverServices } from '../../../../../hooks/use_discover_services'
 const MetricsExperienceGridWrapper = (
   props: ChartSectionProps & { actions: ChartSectionConfigurationExtensionParams['actions'] }
 ) => {
-  const { share, discoverShared } = useDiscoverServices();
+  const { share, discoverShared, dataViews } = useDiscoverServices();
   const breakdownField = useAppStateSelector((state: DiscoverAppState) => state.breakdownField);
   const dispatch = useInternalStateDispatch();
   const updateAppState = useCurrentTabAction(internalStateActions.updateAppState);
@@ -41,7 +41,10 @@ const MetricsExperienceGridWrapper = (
     [dispatch, updateAppState]
   );
 
-  const externalServices = useMemo(() => ({ share, discoverShared }), [share, discoverShared]);
+  const externalServices = useMemo(
+    () => ({ share, discoverShared, dataViews }),
+    [share, discoverShared, dataViews]
+  );
 
   return (
     <UnifiedMetricsExperienceGrid

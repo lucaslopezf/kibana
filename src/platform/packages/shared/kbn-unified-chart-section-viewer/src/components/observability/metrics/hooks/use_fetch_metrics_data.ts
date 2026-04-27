@@ -12,24 +12,12 @@ import { useEffect, useMemo } from 'react';
 import type { ChartSectionProps } from '@kbn/unified-histogram/types';
 import { buildMetricsInfoQuery, hasTransformationalCommand } from '@kbn/esql-utils';
 import { getFieldIconType } from '@kbn/field-utils';
-import type {
-  Dimension,
-  MetricsESQLResponse,
-  MetricsInfo,
-  ParsedMetricItem,
-} from '../../../../types';
+import type { Dimension, MetricsESQLResponse, MetricsInfo, ParsedMetrics } from '../../../../types';
 import { useTelemetry } from '../../../../context/ebt_telemetry_context';
 import { useChartSectionInspector } from '../../../../context/chart_section_inspector';
 import { executeEsqlQuery } from '../utils/execute_esql_query';
 import { parseMetricsWithTelemetry } from '../utils/parse_metrics_response_with_telemetry';
-import { classifyMetricSources } from '../utils/classify_metric_sources';
 import { getEsqlQuery } from '../utils/get_esql_query';
-
-interface FetchedMetrics {
-  metricItems: ParsedMetricItem[];
-  allDimensions: Dimension[];
-  activeDimensions: Dimension[];
-}
 
 /**
  * Fetches METRICS_INFO when in Metrics Experience (non-transformational ES|QL, chart visible).
@@ -65,7 +53,9 @@ export function useFetchMetricsData({
   );
 
   const [{ value, error, loading }, executeFetch] = useAsyncFn(
-    async (signal: AbortSignal): Promise<FetchedMetrics | null> => {
+    async (
+      signal: AbortSignal
+    ): Promise<(ParsedMetrics & { activeDimensions: Dimension[] }) | null> => {
       const documents = await trackRequest(
         'Grid of metrics',
         'This request queries Elasticsearch to fetch metrics info for the grid.',
@@ -99,23 +89,17 @@ export function useFetchMetricsData({
       };
 
       const parsed = parseMetricsWithTelemetry(documents, getFieldType);
-      const classifiedItems = await classifyMetricSources(
-        services.dataViews,
-        parsed.metricItems,
-        parsed.uniqueSources,
-        // Per Elasticsearch guidance, TSDB sources are almost always data streams in practice.
-        // That's why we choose `'data_stream'` as the fallbackKind.
-        { fallbackKind: 'data_stream' }
-      );
+
+      const sortedMetrics: ParsedMetrics = {
+        metricItems: [...parsed.metricItems].sort((a, b) =>
+          a.metricName.localeCompare(b.metricName)
+        ),
+        allDimensions: [...parsed.allDimensions].sort((a, b) => a.name.localeCompare(b.name)),
+      };
 
       if (!signal.aborted) {
         trackMetricsInfo(parsed.telemetry);
       }
-
-      const sortedMetrics = {
-        metricItems: [...classifiedItems].sort((a, b) => a.metricName.localeCompare(b.metricName)),
-        allDimensions: [...parsed.allDimensions].sort((a, b) => a.name.localeCompare(b.name)),
-      };
 
       return {
         ...sortedMetrics,
@@ -130,7 +114,6 @@ export function useFetchMetricsData({
       fetchParams.filters,
       fetchParams.esqlVariables,
       services.data.search.search,
-      services.dataViews,
       services.uiSettings,
       trackMetricsInfo,
       selectedDimensionNames,

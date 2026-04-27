@@ -13,7 +13,7 @@ import type { MappingTimeSeriesMetricType } from '@elastic/elasticsearch/lib/api
 import type { ES_FIELD_TYPES } from '@kbn/field-types';
 import type { SharePluginStart } from '@kbn/share-plugin/public';
 import type { DiscoverSharedPublicStart } from '@kbn/discover-shared-plugin/public';
-
+import type { DataViewsPublicPluginStart } from '@kbn/data-views-plugin/public';
 interface ChartSectionActions {
   openInNewTab?: (params: {
     query?: Query | AggregateQuery;
@@ -80,21 +80,11 @@ export type MetricSourceKind = 'data_stream' | 'index';
 export interface ParsedMetricItem {
   metricName: string;
   dataStream: string;
-  readonly sourceKind: MetricSourceKind;
   readonly units: NullableMetricUnit[];
   readonly metricTypes: MappingTimeSeriesMetricType[];
   readonly fieldTypes: ES_FIELD_TYPES[];
   readonly dimensionFields: Dimension[];
 }
-
-/**
- * Pre-classification shape of a metric item: same as `ParsedMetricItem`
- * but without `sourceKind`. The type-level distinction guarantees that any
- * `ParsedMetricItem` reaching the rendering layer has already been classified.
- *
- * @see ParsedMetricItem
- */
-export type UnclassifiedMetricItem = Omit<ParsedMetricItem, 'sourceKind'>;
 
 export interface MetricsTelemetry {
   total_number_of_metrics: number;
@@ -108,18 +98,18 @@ export interface MetricsTelemetry {
   };
 }
 
-export interface MetricsInfo {
-  loading: boolean;
-  error: Error | null;
+export interface ParsedMetrics {
   metricItems: ParsedMetricItem[];
   allDimensions: Dimension[];
+}
+
+export interface MetricsInfo extends ParsedMetrics {
+  loading: boolean;
+  error: Error | null;
   activeDimensions: Dimension[];
 }
 
-export interface ParsedMetricsWithTelemetry {
-  metricItems: UnclassifiedMetricItem[];
-  allDimensions: Dimension[];
-  uniqueSources: ReadonlySet<string>;
+export interface ParsedMetricsWithTelemetry extends ParsedMetrics {
   telemetry: MetricsTelemetry;
 }
 
@@ -133,4 +123,5 @@ export interface Metric {
 export interface ExternalServices {
   share?: SharePluginStart;
   discoverShared?: DiscoverSharedPublicStart;
+  dataViews?: DataViewsPublicPluginStart;
 }

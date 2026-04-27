@@ -63,7 +63,6 @@ const metricItems: ParsedMetricItem[] = [
   {
     metricName: 'field1',
     dataStream: 'metrics-*',
-    sourceKind: 'data_stream',
     units: ['ms'],
     metricTypes: ['counter'],
     fieldTypes: [ES_FIELD_TYPES.LONG],
@@ -72,7 +71,6 @@ const metricItems: ParsedMetricItem[] = [
   {
     metricName: 'field2',
     dataStream: 'metrics-*',
-    sourceKind: 'data_stream',
     units: ['ms'],
     metricTypes: ['counter'],
     fieldTypes: [ES_FIELD_TYPES.LONG],
@@ -169,7 +167,6 @@ describe('MetricsExperienceGridContent', () => {
       metricName: i % 2 === 0 ? `cpu_field_${i}` : `mem_field_${i}`,
       dimensionFields: [dimensions[0]],
       dataStream: 'metrics-*',
-      sourceKind: 'data_stream' as const,
       units: ['ms'] as MetricUnit[],
       metricTypes: ['counter'] as MappingTimeSeriesMetricType[],
       fieldTypes: [ES_FIELD_TYPES.LONG] as ES_FIELD_TYPES[],

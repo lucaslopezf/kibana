@@ -34,7 +34,7 @@ type UnifiedGridProps = ChartSectionProps & {
   actions: ChartSectionConfigurationExtensionParams['actions'];
   breakdownField?: string;
   onBreakdownFieldChange?: (fieldName?: string) => void;
-  externalServices?: { share?: unknown; discoverShared?: unknown };
+  externalServices?: { share?: unknown; discoverShared?: unknown; dataViews?: unknown };
 };
 
 let unifiedGridProps: UnifiedGridProps | undefined;
@@ -57,11 +57,13 @@ jest.mock('../../../../../application/main/state_management/redux', () => ({
 
 const mockShare = { url: { locators: { get: jest.fn() } } };
 const mockDiscoverShared = { features: { registry: { getById: jest.fn() } } };
+const mockDataViews = { getIndices: jest.fn() };
 
 jest.mock('../../../../../hooks/use_discover_services', () => ({
   useDiscoverServices: jest.fn(() => ({
     share: mockShare,
     discoverShared: mockDiscoverShared,
+    dataViews: mockDataViews,
   })),
 }));
 
@@ -119,6 +121,9 @@ describe('MetricsExperienceGridWrapper', () => {
     (useCurrentTabAction as jest.Mock).mockReturnValue(mockUpdateAppStateAction);
     mockDispatch.mockClear();
     mockUpdateAppStateAction.mockClear();
+    mockShare.url.locators.get.mockClear();
+    mockDiscoverShared.features.registry.getById.mockClear();
+    mockDataViews.getIndices.mockClear();
   });
 
   it('should not prevent default when onFilter is provided', () => {
@@ -137,12 +142,13 @@ describe('MetricsExperienceGridWrapper', () => {
     expect(preventDefault).not.toHaveBeenCalled();
   });
 
-  it('passes externalServices with share and discoverShared from Discover services', () => {
+  it('passes externalServices with share, discoverShared, and dataViews from Discover services', () => {
     renderChartSection();
 
     expect(unifiedGridProps?.externalServices).toEqual({
       share: mockShare,
       discoverShared: mockDiscoverShared,
+      dataViews: mockDataViews,
     });
   });
 

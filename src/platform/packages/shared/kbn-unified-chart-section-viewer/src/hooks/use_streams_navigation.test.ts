@@ -63,6 +63,7 @@ describe('useStreamsNavigation', () => {
       );
 
       expect(result.current.getStreamUrl('metrics-system.cpu-default')).toBeUndefined();
+      expect(mockGetRedirectUrl).not.toHaveBeenCalled();
     });
 
     it('returns undefined when locator is unavailable', () => {
@@ -73,6 +74,7 @@ describe('useStreamsNavigation', () => {
       );
 
       expect(result.current.getStreamUrl('metrics-system.cpu-default')).toBeUndefined();
+      expect(mockGetRedirectUrl).not.toHaveBeenCalled();
     });
 
     it('returns undefined for an empty string', () => {
@@ -81,6 +83,7 @@ describe('useStreamsNavigation', () => {
       );
 
       expect(result.current.getStreamUrl('')).toBeUndefined();
+      expect(mockGetRedirectUrl).not.toHaveBeenCalled();
     });
 
     it('returns undefined for wildcard patterns', () => {
@@ -89,6 +92,7 @@ describe('useStreamsNavigation', () => {
       );
 
       expect(result.current.getStreamUrl('metrics-*')).toBeUndefined();
+      expect(mockGetRedirectUrl).not.toHaveBeenCalled();
     });
 
     it('returns undefined for CCS remote index names', () => {
@@ -99,6 +103,7 @@ describe('useStreamsNavigation', () => {
       expect(
         result.current.getStreamUrl('remote_cluster:metrics-system.cpu-default')
       ).toBeUndefined();
+      expect(mockGetRedirectUrl).not.toHaveBeenCalled();
     });
 
     it('returns a URL for a local data stream even when CCS names exist elsewhere', () => {
@@ -115,6 +120,73 @@ describe('useStreamsNavigation', () => {
       const { result } = renderHook(() => useStreamsNavigation(undefined));
 
       expect(result.current.getStreamUrl('metrics-system.cpu-default')).toBeUndefined();
+      expect(mockGetRedirectUrl).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('isNavigable', () => {
+    it('returns true for a valid local name with permission and locator', () => {
+      const { result } = renderHook(() =>
+        useStreamsNavigation(createMockExternalServices({ hasStreamsFeature: true }))
+      );
+
+      expect(result.current.isNavigable('metrics-system.cpu-default')).toBe(true);
+    });
+
+    it('returns false when permission is missing', () => {
+      const { result } = renderHook(() =>
+        useStreamsNavigation(createMockExternalServices({ hasStreamsFeature: false }))
+      );
+
+      expect(result.current.isNavigable('metrics-system.cpu-default')).toBe(false);
+    });
+
+    it('returns false when locator is unavailable', () => {
+      const { result } = renderHook(() =>
+        useStreamsNavigation(
+          createMockExternalServices({ hasStreamsFeature: true, hasLocator: false })
+        )
+      );
+
+      expect(result.current.isNavigable('metrics-system.cpu-default')).toBe(false);
+    });
+
+    it('returns false for an empty name', () => {
+      const { result } = renderHook(() =>
+        useStreamsNavigation(createMockExternalServices({ hasStreamsFeature: true }))
+      );
+
+      expect(result.current.isNavigable('')).toBe(false);
+    });
+
+    it('returns false for an undefined name', () => {
+      const { result } = renderHook(() =>
+        useStreamsNavigation(createMockExternalServices({ hasStreamsFeature: true }))
+      );
+
+      expect(result.current.isNavigable(undefined)).toBe(false);
+    });
+
+    it('returns false for wildcard patterns', () => {
+      const { result } = renderHook(() =>
+        useStreamsNavigation(createMockExternalServices({ hasStreamsFeature: true }))
+      );
+
+      expect(result.current.isNavigable('metrics-*')).toBe(false);
+    });
+
+    it('returns false for CCS / non-local names', () => {
+      const { result } = renderHook(() =>
+        useStreamsNavigation(createMockExternalServices({ hasStreamsFeature: true }))
+      );
+
+      expect(result.current.isNavigable('remote_cluster:metrics-system.cpu-default')).toBe(false);
+    });
+
+    it('returns false when no externalServices are provided', () => {
+      const { result } = renderHook(() => useStreamsNavigation(undefined));
+
+      expect(result.current.isNavigable('metrics-system.cpu-default')).toBe(false);
     });
   });
 });

@@ -11,8 +11,8 @@ import type {
   Dimension,
   MetricsESQLResponse,
   MetricsTelemetry,
+  ParsedMetricItem,
   ParsedMetricsWithTelemetry,
-  UnclassifiedMetricItem,
 } from '../../../../types';
 
 import { toArray } from './to_array';
@@ -52,11 +52,10 @@ export const parseMetricsWithTelemetry = (
   response: MetricsESQLResponse[],
   getFieldType?: (name: string) => string | undefined
 ): ParsedMetricsWithTelemetry => {
-  const parsedMetrics: UnclassifiedMetricItem[] = [];
+  const parsedMetrics: ParsedMetricItem[] = [];
   const telemetry = createInitialMetricsTelemetry();
 
   const allDimensionsSet = new Set<string>();
-  const uniqueSources = new Set<string>();
 
   const toDimension = (name: string): Dimension => {
     const type = getFieldType?.(name);
@@ -93,7 +92,6 @@ export const parseMetricsWithTelemetry = (
     });
 
     for (const stream of dataStreams) {
-      uniqueSources.add(stream);
       parsedMetrics.push({
         metricName: metric.metric_name,
         dataStream: stream,
@@ -111,7 +109,6 @@ export const parseMetricsWithTelemetry = (
   return {
     metricItems: parsedMetrics,
     allDimensions: Array.from(allDimensionsSet).map(toDimension),
-    uniqueSources,
     telemetry,
   };
 };

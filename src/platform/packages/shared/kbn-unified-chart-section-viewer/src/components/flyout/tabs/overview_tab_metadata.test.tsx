@@ -10,7 +10,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { ParsedMetricItem } from '../../../types';
+import type { MetricSourceKind, ParsedMetricItem } from '../../../types';
 import { ES_FIELD_TYPES } from '@kbn/field-types';
 import { METRIC_TYPE_DESCRIPTIONS } from '../components';
 import { OverviewTabMetadata } from './overview_tab_metadata';
@@ -27,11 +27,15 @@ jest.mock('../../../common/utils', () => ({
   }),
 }));
 
+const mockUseMetricSourceKind = jest.fn();
+jest.mock('../../../hooks/use_metric_source_kind', () => ({
+  useMetricSourceKind: (...args: unknown[]) => mockUseMetricSourceKind(...args),
+}));
+
 describe('OverviewTabMetadata', () => {
   const createMockMetric = (overrides: Partial<ParsedMetricItem> = {}): ParsedMetricItem => ({
     metricName: 'test.metric',
     dataStream: 'test-data-stream',
-    sourceKind: 'data_stream',
     fieldTypes: [ES_FIELD_TYPES.DOUBLE],
     units: ['ms'],
     dimensionFields: [],
@@ -39,8 +43,12 @@ describe('OverviewTabMetadata', () => {
     ...overrides,
   });
 
+  const mockSourceKindAs = (sourceKind: MetricSourceKind) =>
+    mockUseMetricSourceKind.mockReturnValue({ sourceKind, isLoading: false });
+
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSourceKindAs('data_stream');
   });
 
   describe('basic rendering', () => {
@@ -58,16 +66,18 @@ describe('OverviewTabMetadata', () => {
   });
 
   describe('source classification label', () => {
-    it('renders "Data stream" label when sourceKind is data_stream', () => {
-      const metricItem = createMockMetric({ sourceKind: 'data_stream' });
+    it('renders "Data stream" label when classify returns data_stream', () => {
+      mockSourceKindAs('data_stream');
+      const metricItem = createMockMetric();
       const { getByText, queryByText } = render(<OverviewTabMetadata metricItem={metricItem} />);
 
       expect(getByText('Data stream')).toBeInTheDocument();
       expect(queryByText('Index')).not.toBeInTheDocument();
     });
 
-    it('renders "Index" label when sourceKind is index', () => {
-      const metricItem = createMockMetric({ sourceKind: 'index' });
+    it('renders "Index" label when classify returns index', () => {
+      mockSourceKindAs('index');
+      const metricItem = createMockMetric();
       const { getByText, queryByText } = render(<OverviewTabMetadata metricItem={metricItem} />);
 
       expect(getByText('Index')).toBeInTheDocument();

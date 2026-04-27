@@ -12,8 +12,16 @@ import { STREAMS_APP_LOCATOR_ID } from '@kbn/deeplinks-observability';
 import { isNonLocalIndexName } from '@kbn/es-query';
 import type { ExternalServices } from '../types';
 
-export interface UseStreamsNavigationResult {
+interface UseStreamsNavigationResult {
   getStreamUrl: (name: string) => string | undefined;
+  /**
+   * Per-name navigability predicate combining permission, locator
+   * availability, and name validity (empty / wildcard / CCS rejection). True
+   * when `getStreamUrl(name)` would return a URL. Useful for callers that
+   * need to gate work (e.g. a `_resolve/index` request) on whether a Streams
+   * link could render for *this specific* name, without building the URL.
+   */
+  isNavigable: (name: string | undefined) => boolean;
 }
 
 /**
@@ -43,28 +51,30 @@ export const useStreamsNavigation = (
     [externalServices?.share]
   );
 
-  const getStreamUrl = useCallback(
-    (name: string): string | undefined => {
-      if (
-        // Streams feature not registered or locator unavailable in the host app.
-        !canNavigate ||
-        // Defensive: empty / falsy names cannot produce a valid Streams URL.
-        !name ||
-        // Streams locator routes to a single concrete stream (`/{name}`),
-        // so index-pattern wildcards like `metrics-*` are not navigable.
-        name.includes('*') ||
-        // Product decision (see https://github.com/elastic/kibana/issues/239387):
-        // suppress the link when the data stream is non-local (remote cluster
-        // via CCS, or linked project via CPS) because the URL would target the
-        // local cluster/project and not the remote one.
-        isNonLocalIndexName(name)
-      ) {
-        return undefined;
-      }
-      return locator?.getRedirectUrl({ name });
-    },
+  const isNavigable = useCallback(
+    (name: string | undefined): boolean =>
+      // Streams feature must be registered for the user.
+      canNavigate &&
+      // Locator must be available in the host app.
+      !!locator &&
+      // Defensive: empty / falsy names cannot produce a valid Streams URL.
+      !!name &&
+      // Streams locator routes to a single concrete stream (`/{name}`),
+      // so index-pattern wildcards like `metrics-*` are not navigable.
+      !name.includes('*') &&
+      // Product decision (see https://github.com/elastic/kibana/issues/239387):
+      // suppress the link when the data stream is non-local (remote cluster
+      // via CCS, or linked project via CPS) because the URL would target the
+      // local cluster/project and not the remote one.
+      !isNonLocalIndexName(name),
     [canNavigate, locator]
   );
 
-  return { getStreamUrl };
+  const getStreamUrl = useCallback(
+    (name: string): string | undefined =>
+      isNavigable(name) ? locator?.getRedirectUrl({ name }) : undefined,
+    [isNavigable, locator]
+  );
+
+  return { getStreamUrl, isNavigable };
 };

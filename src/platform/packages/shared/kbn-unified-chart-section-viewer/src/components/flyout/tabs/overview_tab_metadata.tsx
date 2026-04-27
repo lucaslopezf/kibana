@@ -16,6 +16,7 @@ import { getUnitLabel } from '../../../common/utils';
 import type { ParsedMetricItem } from '../../../types';
 import { BadgeGroup, DataStreamLink, MetricTypeBadge } from '../components';
 import { useStreamsNavigation } from '../../../hooks/use_streams_navigation';
+import { useMetricSourceKind } from '../../../hooks/use_metric_source_kind';
 import { useExternalServices } from '../../../context/external_services';
 
 export interface OverviewTabMetadataProps {
@@ -26,7 +27,8 @@ export const OverviewTabMetadata = ({ metricItem }: OverviewTabMetadataProps) =>
   const { euiTheme } = useEuiTheme();
   const externalServices = useExternalServices();
   const { getStreamUrl } = useStreamsNavigation(externalServices);
-  const isDataStream = metricItem.sourceKind === 'data_stream';
+  const { sourceKind } = useMetricSourceKind(metricItem.dataStream);
+  const isDataStream = sourceKind === 'data_stream';
   const streamUrl = isDataStream ? getStreamUrl(metricItem.dataStream) : undefined;
 
   const { rows, labelMinWidthPx } = useMemo(() => {

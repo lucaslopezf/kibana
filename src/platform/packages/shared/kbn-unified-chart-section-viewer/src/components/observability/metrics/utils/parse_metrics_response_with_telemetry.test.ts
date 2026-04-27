@@ -20,7 +20,6 @@ describe('parseMetricsWithTelemetry', () => {
     expect(parseMetricsWithTelemetry([])).toEqual({
       metricItems: [],
       allDimensions: [],
-      uniqueSources: new Set(),
       telemetry: createInitialMetricsTelemetry(),
     });
   });
@@ -49,7 +48,6 @@ describe('parseMetricsWithTelemetry', () => {
         },
       ],
       allDimensions: [{ name: 'host.name' }],
-      uniqueSources: new Set(['my-index']),
       telemetry: {
         total_number_of_metrics: 1,
         total_number_of_dimensions: 1,
@@ -88,7 +86,6 @@ describe('parseMetricsWithTelemetry', () => {
         },
       ],
       allDimensions: [{ name: 'host.name' }],
-      uniqueSources: new Set(['my-index']),
       telemetry: {
         total_number_of_metrics: 1,
         total_number_of_dimensions: 1,
@@ -135,7 +132,6 @@ describe('parseMetricsWithTelemetry', () => {
         },
       ],
       allDimensions: [{ name: 'host.name' }],
-      uniqueSources: new Set(['stream-a', 'stream-b']),
       telemetry: {
         total_number_of_metrics: 1,
         total_number_of_dimensions: 1,
@@ -174,7 +170,6 @@ describe('parseMetricsWithTelemetry', () => {
         },
       ],
       allDimensions: [{ name: 'host.name' }],
-      uniqueSources: new Set(['my-index']),
       telemetry: {
         total_number_of_metrics: 1,
         total_number_of_dimensions: 1,
@@ -213,7 +208,6 @@ describe('parseMetricsWithTelemetry', () => {
         },
       ],
       allDimensions: [{ name: 'host.name' }, { name: 'pod.name' }],
-      uniqueSources: new Set(['my-index']),
       telemetry: {
         total_number_of_metrics: 1,
         total_number_of_dimensions: 2,

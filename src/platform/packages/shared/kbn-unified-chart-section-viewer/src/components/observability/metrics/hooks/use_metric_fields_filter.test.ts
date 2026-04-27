@@ -19,7 +19,6 @@ describe('useMetricFieldsFilter', () => {
     {
       metricName: 'system.cpu.utilization',
       dataStream: 'metrics-*',
-      sourceKind: 'data_stream',
       units: ['ms'],
       metricTypes: ['counter'],
       fieldTypes: [ES_FIELD_TYPES.DOUBLE],
@@ -28,7 +27,6 @@ describe('useMetricFieldsFilter', () => {
     {
       metricName: 'system.memory.utilization',
       dataStream: 'metrics-*',
-      sourceKind: 'data_stream',
       units: ['ms'],
       metricTypes: ['counter'],
       fieldTypes: [ES_FIELD_TYPES.DOUBLE],
