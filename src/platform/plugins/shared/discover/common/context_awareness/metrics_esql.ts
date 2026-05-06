@@ -65,3 +65,29 @@ export const isMetricsEsqlSupported = (esql: string): MetricsEsqlSupportResult =
   }
   return { ok: true };
 };
+
+/**
+ * Internal `METRICS_INFO.dimension_fields` names that are metadata, not
+ * user-facing dimensions. Mirrors the UI filter in the metrics-experience
+ * grid so client and server agree on the canonical breakdown list.
+ *
+ * TODO: Both sites should consume the same shared package. Today the UI
+ * version lives in `kbn-unified-chart-section-viewer` (a UI package that
+ * cannot depend on this Discover-internal common module) so we duplicate
+ * the constants here. When a neutral `kbn-*` home exists, migrate both.
+ *
+ * See: https://github.com/elastic/observability-dev/issues/5412
+ */
+export const INTERNAL_METRICS_DIMENSION_EXACT_NAMES: ReadonlySet<string> = new Set([
+  '_metric_names_hash',
+  'unit',
+]);
+
+export const INTERNAL_METRICS_DIMENSION_PREFIXES: readonly string[] = ['labels._'];
+
+export const isInternalMetricsDimension = (name: string): boolean => {
+  if (INTERNAL_METRICS_DIMENSION_EXACT_NAMES.has(name)) {
+    return true;
+  }
+  return INTERNAL_METRICS_DIMENSION_PREFIXES.some((prefix) => name.startsWith(prefix));
+};

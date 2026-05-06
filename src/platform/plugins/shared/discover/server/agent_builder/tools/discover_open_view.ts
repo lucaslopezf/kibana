@@ -24,7 +24,10 @@ import { buildMetricsInfoQuery } from '@kbn/esql-utils';
 import { setStateToKbnUrl } from '@kbn/kibana-utils-plugin/common';
 import { appLocatorGetLocationCommon } from '../../../common/app_locator_get_location';
 import { METRICS_EXPERIENCE_PRODUCT_FEATURE_ID } from '../../../common/constants';
-import { isMetricsEsqlSupported } from '../../../common/context_awareness/metrics_esql';
+import {
+  isInternalMetricsDimension,
+  isMetricsEsqlSupported,
+} from '../../../common/context_awareness/metrics_esql';
 import { getKibanaAppUrl } from './kibana_app_url';
 
 const DEFAULT_TIME_RANGE = { from: 'now-15m', to: 'now' } as const;
@@ -86,9 +89,9 @@ const TOOL_DESCRIPTION = `Builds a Kibana Discover URL that opens with the metri
 
 **Inputs to flag:**
 - \`pattern\` defaults to \`metrics-*\`, which is correct for any generic "show me [...] metrics" request. Override only when the user explicitly typed a specific pattern.
-- \`breakdownField\` is optional. When set it must be a \`time_series_dimension\` field on the matching indices; the call is rejected with the list of available dimensions otherwise.
+- \`breakdownField\` is optional. When set it must appear in the indices' \`METRICS_INFO.dimension_fields\` (the same source the Discover metrics grid uses to populate its dimension picker); the call is rejected with the list of valid dimensions otherwise.
 
-**Response shape:** \`url\` (fully-qualified Discover link), \`esql_query\` (what the URL runs), \`resolved_pattern\`, \`breakdown_field\`, \`available_breakdown_fields\` (every \`time_series_dimension: true\` field discovered in the matching indices — use it to pick a valid \`breakdownField\`), \`summary\` (a \`METRICS_INFO\` snapshot — metric name, dimensions, unit, … — of the metrics that match the URL's pipeline, scoped to \`breakdownField\` when one is set), and \`will_activate\` plus optional \`activation_blockers\`.
+**Response shape:** \`url\` (fully-qualified Discover link), \`esql_query\` (what the URL runs), \`resolved_pattern\`, \`breakdown_field\`, \`available_breakdown_fields\` (every dimension surfaced by \`METRICS_INFO\` for the matching indices — pick a valid \`breakdownField\` from this list), \`summary\` (the full \`METRICS_INFO\` snapshot — metric name, dimensions, unit, … — for the pattern, independent of \`breakdownField\`), and \`will_activate\` plus optional \`activation_blockers\`.
 
 **How to render the response to the user:** include the inline \`summary\` AND the URL as a markdown link \`[Open in Discover](url)\`. The summary describes what metrics are in the matching indices; the URL drills in with the user's chosen time range and breakdown applied. Don't drop either piece.
 
@@ -143,35 +146,37 @@ export const discoverOpenViewTool = (
         });
       }
 
-      // 3. Introspect the index mapping to discover available breakdown
-      // fields (time-series dimensions) and validate user-supplied breakdownField.
-      // An invalid breakdown is a hard error: returning a Discover URL with a
-      // dead breakdown produces a broken view, so we reject before composing
-      // the URL or the metrics-info summary.
-      const availableBreakdownFields = await getAvailableBreakdownFields(
-        esClient,
-        input.pattern,
-        logger
-      );
+      // 3. Run METRICS_INFO once to derive both the canonical dimension list
+      // (same source the metrics-experience grid uses to populate its picker)
+      // and the inline summary the agent renders alongside the URL. Sharing a
+      // single round-trip keeps validation and rendering in lockstep with the UI.
+      const snapshot = await getMetricsSnapshot(esClient, esql, logger);
+
+      // 4. Validate user-supplied breakdownField against the canonical list.
+      // An invalid breakdown is a hard error: returning a Discover URL whose
+      // breakdownField the metrics grid cannot match leaves the dimension
+      // picker silently empty, so we reject before composing the URL.
       if (
         input.breakdownField !== undefined &&
-        !availableBreakdownFields.includes(input.breakdownField)
+        !snapshot.availableBreakdownFields.includes(input.breakdownField)
       ) {
         const suggestions =
-          availableBreakdownFields.length > 0
-            ? ` Available time-series dimensions in this pattern: ${availableBreakdownFields.join(
+          snapshot.availableBreakdownFields.length > 0
+            ? ` Available dimensions in this pattern: ${snapshot.availableBreakdownFields.join(
                 ', '
               )}.`
-            : ' No time-series dimensions were found in this pattern (it may not be a metrics index, or you lack read access).';
+            : snapshot.snapshotError
+            ? ` METRICS_INFO introspection failed: ${snapshot.snapshotError}.`
+            : ' No dimensions were surfaced by METRICS_INFO for this pattern (it may not be a metrics index, or you lack read access).';
         return metricsErrorResult({
-          message: `breakdownField "${input.breakdownField}" is not a time-series dimension on any matching index of "${input.pattern}".${suggestions}`,
+          message: `breakdownField "${input.breakdownField}" is not a metrics dimension surfaced by METRICS_INFO for "${input.pattern}".${suggestions}`,
           esql,
           pattern: input.pattern,
-          extra: { available_breakdown_fields: availableBreakdownFields },
+          extra: { available_breakdown_fields: snapshot.availableBreakdownFields },
         });
       }
 
-      // 4. Construct the fully-qualified URL. (Pricing-tier gating is handled
+      // 5. Construct the fully-qualified URL. (Pricing-tier gating is handled
       // by `availability` above — the agent never sees this tool on tiers
       // without the metrics-experience product feature.)
       const urlResult = await constructDiscoverUrl({
@@ -191,7 +196,7 @@ export const discoverOpenViewTool = (
       }
       const url = urlResult.url;
 
-      // 5. Surface localhost fallback as a non-fatal blocker.
+      // 6. Surface localhost fallback as a non-fatal blocker.
       // TODO: also fall back to cloud.kibanaUrl when publicBaseUrl is unset
       // (requires `cloud` as an optional Discover dep — deferred).
       const blockers: string[] = [];
@@ -201,11 +206,6 @@ export const discoverOpenViewTool = (
         );
       }
 
-      // 6. Fetch a small inline metrics-info summary so the agent can render
-      // data alongside the URL in a single response.
-      // Best-effort — failures don't block the URL from being returned.
-      const summary = await getMetricsSummary(esClient, esql, input.breakdownField, logger);
-
       return {
         results: [
           createOtherResult({
@@ -213,8 +213,8 @@ export const discoverOpenViewTool = (
             esql_query: esql,
             resolved_pattern: input.pattern,
             breakdown_field: input.breakdownField,
-            available_breakdown_fields: availableBreakdownFields,
-            summary,
+            available_breakdown_fields: snapshot.availableBreakdownFields,
+            summary: snapshot.summary,
             will_activate: blockers.length === 0,
             activation_blockers: blockers.length > 0 ? blockers : undefined,
           }),
@@ -262,88 +262,94 @@ const validateWhereFragment = (fragment: string): { ok: true } | { ok: false; re
   return { ok: true };
 };
 
+interface MetricsSummary {
+  columns: string[];
+  rows: Array<Record<string, unknown>>;
+}
+
+interface MetricsSnapshot {
+  summary: MetricsSummary | null;
+  availableBreakdownFields: string[];
+  snapshotError?: string;
+}
+
 /**
- * Fetches field caps for the pattern and returns the list of fields tagged
- * `time_series_dimension: true`. Empty list on any error (missing index,
- * no permissions, non-time-series indices) — never fails the tool call.
+ * Runs `TS <pattern> | METRICS_INFO` once and returns both the inline
+ * summary the agent renders alongside the URL and the canonical list of
+ * dimensions to validate `breakdownField` against.
  *
- * The agent uses this list to pick a valid `breakdownField` instead of
- * guessing OTel-vs-ECS field names.
+ * The dimension list is derived from the `dimension_fields` column of the
+ * METRICS_INFO response — the same source the metrics-experience grid uses
+ * to populate its picker (see `parseMetricsWithTelemetry` in
+ * `kbn-unified-chart-section-viewer`). Internal metadata names like
+ * `_metric_names_hash`, `unit`, and `labels._*` are filtered out via
+ * {@link isInternalMetricsDimension} so they never surface to the agent.
+ *
+ * The query is intentionally unfiltered (no breakdown WHERE clause). The
+ * URL still carries the chosen breakdownField, so the user lands in
+ * Discover with it applied; the snapshot is a global picture of what's in
+ * the indices, not a per-breakdown subset.
+ *
+ * Failures are non-fatal: the URL is the primary deliverable. We log the
+ * error, return an empty dimension list plus the human-readable reason in
+ * `snapshotError`, and let the caller surface it in the validation message.
  */
-const getAvailableBreakdownFields = async (
+const getMetricsSnapshot = async (
   esClient: IScopedClusterClient,
-  pattern: string,
+  esql: string,
   logger: Logger
-): Promise<string[]> => {
+): Promise<MetricsSnapshot> => {
+  const snapshotQuery = buildMetricsInfoQuery(esql);
+  if (snapshotQuery === '') {
+    const reason = `buildMetricsInfoQuery rejected the pipeline "${esql}".`;
+    logger.warn(`discover.open_view: skipping snapshot — ${reason}`);
+    return { summary: null, availableBreakdownFields: [], snapshotError: reason };
+  }
+
   try {
-    const fieldCaps = await esClient.asCurrentUser.fieldCaps({
-      index: pattern,
-      fields: '*',
-      // Ask ES to surface only fields it considers candidates for time-series
-      // dimensions. Falls back gracefully on indices without dimension metadata.
-      include_unmapped: false,
-    });
-    const dimensions = new Set<string>();
-    for (const [fieldName, byType] of Object.entries(fieldCaps.fields)) {
-      for (const typeInfo of Object.values(byType)) {
-        if (typeInfo.time_series_dimension === true) {
-          dimensions.add(fieldName);
-          break;
-        }
-      }
-    }
-    return [...dimensions].sort();
+    const response = await esClient.asCurrentUser.esql.query({ query: snapshotQuery });
+    const columns = response.columns.map((c) => c.name);
+    const rows = response.values.map((row) => zipObject(columns, row));
+    return {
+      summary: { columns, rows },
+      availableBreakdownFields: extractAvailableBreakdownFields(rows),
+    };
   } catch (error) {
+    const reason = (error as Error).message;
     logger.warn(
-      `discover.open_view: field_caps lookup for pattern "${pattern}" failed: ${
-        (error as Error).message
-      }`
+      `discover.open_view: METRICS_INFO snapshot for pipeline "${esql}" failed: ${reason}`
     );
-    return [];
+    return { summary: null, availableBreakdownFields: [], snapshotError: reason };
   }
 };
 
 /**
- * Fetches a small inline summary of the metrics that match the URL's ES|QL
- * pipeline so the agent can render data alongside the link in a single
- * response. Returns `null` on any error — the URL is the primary deliverable;
- * the summary is best-effort.
- *
- * Implementation: appends `| METRICS_INFO` to the same `TS …` pipeline used
- * by the URL via `buildMetricsInfoQuery` from `@kbn/esql-utils`. That helper
- * already parses the source query, drops transformational commands (`STATS`,
- * `KEEP`, `DROP`, `RENAME`, `ENRICH`, `JOIN`, …), preserves an explicit
- * `LIMIT`, and sanitises the breakdown dimension via `sanitazeESQLInput`.
- *
- * The result is a snapshot of metric metadata (name, dimensions, unit, …),
- * not a time-range-scoped aggregation, so it doesn't need to agree with the
- * URL's chosen time range.
+ * Aggregates `dimension_fields` across all METRICS_INFO rows into a
+ * deduped, sorted, internal-filtered list. Mirrors
+ * `parseMetricsWithTelemetry` so the validation list matches the
+ * dimensions the UI shows in its picker.
  */
-const getMetricsSummary = async (
-  esClient: IScopedClusterClient,
-  esql: string,
-  breakdownField: string | undefined,
-  logger: Logger
-): Promise<{ columns: string[]; rows: Array<Record<string, unknown>> } | null> => {
-  const summaryQuery = buildMetricsInfoQuery(esql, breakdownField ? [breakdownField] : undefined);
-  if (summaryQuery === '') {
-    logger.warn(
-      `discover.open_view: skipping summary — buildMetricsInfoQuery rejected the pipeline "${esql}".`
-    );
-    return null;
+const extractAvailableBreakdownFields = (rows: Array<Record<string, unknown>>): string[] => {
+  const dimensions = new Set<string>();
+
+  const addDimension = (name: unknown) => {
+    if (typeof name === 'string' && !isInternalMetricsDimension(name)) {
+      dimensions.add(name);
+    }
+  };
+
+  for (const row of rows) {
+    const dimensionFields = row.dimension_fields;
+    if (Array.isArray(dimensionFields)) {
+      for (const name of dimensionFields) {
+        addDimension(name);
+      }
+    } else {
+      addDimension(dimensionFields);
+    }
   }
 
-  try {
-    const response = await esClient.asCurrentUser.esql.query({ query: summaryQuery });
-    const columns = response.columns.map((c) => c.name);
-    const rows = response.values.map((row) => zipObject(columns, row));
-    return { columns, rows };
-  } catch (error) {
-    logger.warn(
-      `discover.open_view: summary query for pipeline "${esql}" failed: ${(error as Error).message}`
-    );
-    return null;
-  }
+  return [...dimensions].sort();
 };
 
 const constructDiscoverUrl = async (params: {
