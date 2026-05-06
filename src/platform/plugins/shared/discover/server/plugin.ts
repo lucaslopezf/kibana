@@ -27,6 +27,7 @@ import { registerSampleData } from './sample_data';
 import { getUiSettings } from './ui_settings';
 import { registerAttachments } from './agent_builder/register_attachments';
 import { registerSkill } from './agent_builder/register_skill';
+import { registerTools } from './agent_builder/register_tools';
 import type { ConfigSchema } from './config';
 import { appLocatorGetLocationCommon } from '../common/app_locator_get_location';
 import {
@@ -87,6 +88,7 @@ export class DiscoverServerPlugin
     if (plugins.agentBuilder) {
       registerAttachments(plugins.agentBuilder);
       registerSkill(plugins.agentBuilder);
+      registerTools(plugins.agentBuilder, core);
     }
 
     core.pricing.registerProductFeatures([

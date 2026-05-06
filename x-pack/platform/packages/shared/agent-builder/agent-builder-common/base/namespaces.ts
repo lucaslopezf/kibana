@@ -12,6 +12,7 @@
 export const internalNamespaces = {
   platformCore: 'platform.core',
   platformDashboard: 'platform.dashboard',
+  platformDiscover: 'platform.discover',
   platformStreams: 'platform.streams',
   filestore: 'filestore',
   attachments: 'attachments',
@@ -31,6 +32,7 @@ export const protectedNamespaces: string[] = [
   internalNamespaces.filestore,
   internalNamespaces.observability,
   internalNamespaces.platformDashboard, // Owned by dashboard_agent plugin
+  internalNamespaces.platformDiscover, // Owned by discover plugin
   internalNamespaces.platformStreams,
   internalNamespaces.search,
   internalNamespaces.security,

@@ -9,8 +9,8 @@
 
 import type { AggregateQuery, Query } from '@kbn/es-query';
 import { isOfAggregateQueryType } from '@kbn/es-query';
-import { Parser } from '@elastic/esql';
 import { METRICS_EXPERIENCE_PRODUCT_FEATURE_ID } from '../../../../../common/constants';
+import { isMetricsEsqlSupported } from '../../../../../common/context_awareness/metrics_esql';
 import type { DataSourceProfileProvider } from '../../../profiles';
 import { DataSourceCategory, SolutionType } from '../../../profiles';
 import { createChartSection } from './accessor/chart_section';
@@ -19,8 +19,6 @@ import { getDefaultAppState } from './accessor/get_default_app_state';
 export type MetricsExperienceDataSourceProfileProvider = DataSourceProfileProvider<{}>;
 
 export const METRICS_DATA_SOURCE_PROFILE_ID = 'metrics-data-source-profile';
-// FIXME: could kbn-esql-language provide a union type with existing commands?
-const SUPPORTED_ESQL_COMMANDS = new Set(['ts', 'limit', 'sort', 'where']);
 export const createMetricsDataSourceProfileProvider =
   (): MetricsExperienceDataSourceProfileProvider => ({
     profileId: METRICS_DATA_SOURCE_PROFILE_ID,
@@ -56,10 +54,5 @@ function isQuerySupported(query: AggregateQuery | Query | undefined): query is A
   if (!isOfAggregateQueryType(query)) {
     return false;
   }
-
-  const parsed = Parser.parse(query.esql);
-  if (parsed.root.commands.length === 0 || parsed.errors.length > 0) {
-    return false;
-  }
-  return parsed.root.commands.every((c) => SUPPORTED_ESQL_COMMANDS.has(c.name));
+  return isMetricsEsqlSupported(query.esql).ok;
 }
