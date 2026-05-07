@@ -20,14 +20,12 @@ import type {
 import { ToolType } from '@kbn/agent-builder-common';
 import type { BuiltinToolDefinition } from '@kbn/agent-builder-server';
 import { createErrorResult, createOtherResult } from '@kbn/agent-builder-server';
+import { ALLOWED_METRIC_TYPES_SET, isInternalDimension } from '@kbn/discover-utils';
 import { buildMetricsInfoQuery } from '@kbn/esql-utils';
 import { setStateToKbnUrl } from '@kbn/kibana-utils-plugin/common';
 import { appLocatorGetLocationCommon } from '../../../common/app_locator_get_location';
 import { METRICS_EXPERIENCE_PRODUCT_FEATURE_ID } from '../../../common/constants';
-import {
-  isInternalMetricsDimension,
-  isMetricsEsqlSupported,
-} from '../../../common/context_awareness/metrics_esql';
+import { isMetricsEsqlSupported } from '../../../common/context_awareness/metrics_esql';
 import { getKibanaAppUrl } from './kibana_app_url';
 
 const DEFAULT_TIME_RANGE = { from: 'now-15m', to: 'now' } as const;
@@ -100,8 +98,7 @@ const TOOL_DESCRIPTION = `Builds a Kibana Discover URL that opens with the metri
 export const discoverOpenViewTool = (
   coreSetup: CoreSetup
 ): BuiltinToolDefinition<DiscoverOpenViewSchema> => {
-  // Cache the start-services promise so it resolves at most once across
-  // invocations, mirroring the pattern used by other Agent Builder tools
+  // Cache the start-services promise so it resolves at most once across invocations.
   let startServicesPromise: ReturnType<CoreSetup['getStartServices']> | undefined;
   const getStartServices = () => {
     if (!startServicesPromise) {
@@ -283,7 +280,7 @@ interface MetricsSnapshot {
  * to populate its picker (see `parseMetricsWithTelemetry` in
  * `kbn-unified-chart-section-viewer`). Internal metadata names like
  * `_metric_names_hash`, `unit`, and `labels._*` are filtered out via
- * {@link isInternalMetricsDimension} so they never surface to the agent.
+ * {@link isInternalDimension} so they never surface to the agent.
  *
  * The query is intentionally unfiltered (no breakdown WHERE clause). The
  * URL still carries the chosen breakdownField, so the user lands in
@@ -325,31 +322,38 @@ const getMetricsSnapshot = async (
 
 /**
  * Aggregates `dimension_fields` across all METRICS_INFO rows into a
- * deduped, sorted, internal-filtered list. Mirrors
- * `parseMetricsWithTelemetry` so the validation list matches the
- * dimensions the UI shows in its picker.
+ * deduped, sorted, internal-filtered list. Applies the same row-level
+ * metric-type gate (`ALLOWED_METRIC_TYPES`) and dimension-name filter
+ * (`isInternalDimension`) the metrics-experience grid uses, so the
+ * validation list matches the dimensions the UI will actually render.
  */
 const extractAvailableBreakdownFields = (rows: Array<Record<string, unknown>>): string[] => {
   const dimensions = new Set<string>();
 
-  const addDimension = (name: unknown) => {
-    if (typeof name === 'string' && !isInternalMetricsDimension(name)) {
-      dimensions.add(name);
-    }
-  };
-
   for (const row of rows) {
-    const dimensionFields = row.dimension_fields;
-    if (Array.isArray(dimensionFields)) {
-      for (const name of dimensionFields) {
-        addDimension(name);
+    const metricTypes = toArray(row.metric_type);
+    if (!metricTypes.every((type) => ALLOWED_METRIC_TYPES_SET.has(type))) {
+      continue;
+    }
+    for (const name of toArray(row.dimension_fields)) {
+      if (!isInternalDimension(name)) {
+        dimensions.add(name);
       }
-    } else {
-      addDimension(dimensionFields);
     }
   }
 
   return [...dimensions].sort();
+};
+
+/**
+ * Coerces a METRICS_INFO column value (which may be a single string or a
+ * string array depending on cardinality) into a string array, dropping
+ * anything that isn't a string. Mirrors the UI's `toArray` helper.
+ */
+const toArray = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.filter((v): v is string => typeof v === 'string');
+  if (typeof value === 'string') return [value];
+  return [];
 };
 
 const constructDiscoverUrl = async (params: {

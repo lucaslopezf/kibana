@@ -10,10 +10,12 @@
 import type { CoreSetup } from '@kbn/core/server';
 import type { AgentBuilderPluginSetup } from '@kbn/agent-builder-plugin/server';
 import { discoverOpenViewTool } from './tools/discover_open_view';
+import { discoverReadUrlTool } from './tools/discover_read_url';
 
 export const registerTools = (
   agentBuilder: AgentBuilderPluginSetup,
   coreSetup: CoreSetup
 ): void => {
   agentBuilder.tools.register(discoverOpenViewTool(coreSetup));
+  agentBuilder.tools.register(discoverReadUrlTool());
 };

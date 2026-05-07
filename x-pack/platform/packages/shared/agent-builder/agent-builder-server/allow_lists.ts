@@ -56,6 +56,7 @@ export const AGENT_BUILDER_BUILTIN_TOOLS = [
 
   // Discover
   `${internalNamespaces.platformDiscover}.open_view`,
+  `${internalNamespaces.platformDiscover}.read_url`,
 
   // Workflows
   `${internalNamespaces.workflows}.validate_workflow`,

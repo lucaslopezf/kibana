@@ -8,6 +8,7 @@
  */
 
 export * from './constants';
+export * from './metrics_experience';
 export * as fieldConstants from './field_constants';
 export * from './hooks';
 export * from './utils';

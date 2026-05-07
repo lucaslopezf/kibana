@@ -93,6 +93,8 @@ export {
 
 export type { LogsContextService, ApmContextService, SortOrder, SortInput, SortPair } from './src';
 
+export { ALLOWED_METRIC_TYPES, ALLOWED_METRIC_TYPES_SET, isInternalDimension } from './src';
+
 export * from './src/types';
 
 export * from './src/data_types/logs/constants';

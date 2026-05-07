@@ -7,6 +7,7 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
+import { ALLOWED_METRIC_TYPES_SET, isInternalDimension } from '@kbn/discover-utils';
 import type {
   Dimension,
   MetricsESQLResponse,
@@ -16,10 +17,7 @@ import type {
 } from '../../../../types';
 
 import { toArray } from './to_array';
-import { ALLOWED_METRIC_TYPES } from '../../../../common/constants';
 import { accumulateMetricsRowTelemetry } from '../telemetry';
-
-const ALLOWED_METRIC_TYPES_SET = new Set(ALLOWED_METRIC_TYPES);
 
 export const createInitialMetricsTelemetry = (): MetricsTelemetry => ({
   total_number_of_metrics: 0,
@@ -28,25 +26,6 @@ export const createInitialMetricsTelemetry = (): MetricsTelemetry => ({
   units: {},
   multi_value_counts: { data_streams: 0, field_types: 0, metric_types: 0 },
 });
-
-/**
- * Dimension names that are internal metadata and should not be exposed to users.
- * See: https://github.com/elastic/observability-dev/issues/5412
- */
-const INTERNAL_DIMENSION_EXACT_NAMES = new Set(['_metric_names_hash', 'unit']);
-
-/**
- * Dimension name prefixes that indicate internal metadata fields.
- * Any dimension whose name starts with one of these prefixes will be hidden.
- */
-const INTERNAL_DIMENSION_PREFIXES = ['labels._'];
-
-const isInternalDimension = (name: string): boolean => {
-  if (INTERNAL_DIMENSION_EXACT_NAMES.has(name)) {
-    return true;
-  }
-  return INTERNAL_DIMENSION_PREFIXES.some((prefix) => name.startsWith(prefix));
-};
 
 export const parseMetricsWithTelemetry = (
   response: MetricsESQLResponse[],
