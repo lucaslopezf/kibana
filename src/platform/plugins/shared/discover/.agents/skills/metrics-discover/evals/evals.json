@@ -1,0 +1,134 @@
+{
+  "skill_name": "metrics-discover",
+  "evals": [
+    {
+      "id": 0,
+      "name": "debug-activation",
+      "prompt": "I'm in Kibana Discover and ran the ES|QL query `FROM metrics-* | LIMIT 100` against my metrics index, but I'm getting the regular table view, not the metrics grid I was expecting. Why isn't the metrics experience activating? Walk me through the things to check, in order.",
+      "expected_output": "Identifies that the query is missing the TS source command (most queries should start with TS, not FROM), points to the SUPPORTED_ESQL_COMMANDS allowlist (ts/limit/sort/where) and METRICS_EXPERIENCE_PRODUCT_FEATURE_ID feature flag. Bonus: mentions solution-type gating.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "identifies-FROM-vs-TS-mismatch",
+          "description": "Notes that the query uses FROM but the metrics profile expects TS as the source command"
+        },
+        {
+          "name": "mentions-SUPPORTED_ESQL_COMMANDS-allowlist",
+          "description": "Calls out the supported-command allowlist (ts/limit/sort/where) by name or by listing the allowed commands"
+        },
+        {
+          "name": "mentions-product-feature-flag",
+          "description": "Mentions METRICS_EXPERIENCE_PRODUCT_FEATURE_ID or the product-feature gate as a thing to verify"
+        },
+        {
+          "name": "points-to-profile.ts",
+          "description": "References profile.ts in the metrics_data_source_profile directory as the file holding activation logic"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "add-rename-command",
+      "prompt": "I want to allow the `RENAME` command inside ES|QL queries that activate the metrics data source profile in Discover. List the code changes I need to make.",
+      "expected_output": "Points to SUPPORTED_ESQL_COMMANDS in profile.ts as the primary change, requires adding a unit-test case to profile.test.ts, and flags the need to walk callers of use_esql_query_info in the kbn-unified-chart-section-viewer package. Bonus: warns that RENAME is a transformational-style command which may conflict with the grid's per-card aggregation.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "edits-SUPPORTED_ESQL_COMMANDS",
+          "description": "Identifies SUPPORTED_ESQL_COMMANDS in profile.ts as the constant to update"
+        },
+        {
+          "name": "adds-unit-test-for-profile",
+          "description": "Calls out adding a unit-test case to profile.test.ts (or equivalent) covering the new command"
+        },
+        {
+          "name": "checks-viewer-package-callers",
+          "description": "Mentions walking callers of use_esql_query_info (or the kbn-unified-chart-section-viewer package) to confirm RENAME doesn't break query inspection / breakdown"
+        },
+        {
+          "name": "warns-about-transformational-conflict",
+          "description": "Notes the design tension: the profile rejects transformational commands because the grid does its own per-card aggregation, so RENAME may conflict"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "agent-builder-handoff",
+      "prompt": "I'm building an Agent Builder tool that should land users on the metrics grid in Discover, filtered by `service.name = 'checkout'`. What ES|QL should the tool generate, and what should I avoid?",
+      "expected_output": "Provides ES|QL using TS source + WHERE filter (e.g., TS metrics-* | WHERE service.name == \"checkout\"), explicitly avoids STATS/EVAL/KEEP/DROP/RENAME, notes that LIMIT/SORT will be ignored by the grid's own pagination/ordering.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses-TS-source-not-FROM",
+          "description": "Generated query uses TS as the source command, not FROM"
+        },
+        {
+          "name": "uses-WHERE-for-filter",
+          "description": "Uses WHERE service.name == \"checkout\" (or equivalent) for the filter"
+        },
+        {
+          "name": "avoids-STATS-EVAL-KEEP-DROP",
+          "description": "Explicitly warns against STATS / EVAL / KEEP / DROP / RENAME (transformational commands)"
+        },
+        {
+          "name": "notes-LIMIT-SORT-ignored-by-grid",
+          "description": "Mentions that user-supplied SORT/LIMIT are accepted by the profile but the grid does its own ordering/pagination, so relying on them is brittle"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "add-ebt-event-for-interaction",
+      "prompt": "I want to fire an EBT event when the user opens the breakdown selector in the metrics grid (so the team can see how often that interaction happens). List the code changes I need to make.",
+      "expected_output": "Points to metrics_ebt_events.ts as the registration site for a new event type with a schema, knows the useTelemetry hook from EventBasedTelemetryProvider as the firing pattern, treats this as a new event type (not reuse of discover_metrics_info), and fires from the breakdown-selector call site (DimensionsSelector / metrics_experience_state_context.tsx).",
+      "files": [],
+      "assertions": [
+        {
+          "name": "points-to-metrics_ebt_events.ts",
+          "description": "Names metrics_ebt_events.ts (or registerMetricsEbtEvents) as the file where a new event type must be registered with a schema"
+        },
+        {
+          "name": "mentions-useTelemetry-and-provider",
+          "description": "Identifies the useTelemetry() hook and EventBasedTelemetryProvider as the firing pattern (must be inside the provider, not call analytics.reportEvent directly)"
+        },
+        {
+          "name": "defines-new-event-schema",
+          "description": "Treats this as a new event type with its own schema, not a reuse of the existing discover_metrics_info data-load event"
+        },
+        {
+          "name": "fires-from-state-context-call-site",
+          "description": "Fires from the breakdown-selector call site (e.g. onDimensionsChange in metrics_experience_state_context.tsx, or the breakdown_selector.ts toggle handler) \u2014 not from the registration file or the data-fetch hook"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "trace-flyout-overview-data-source",
+      "prompt": "Where does the metric type, unit, and dimension data shown in the flyout overview tab come from? Trace the full data flow \u2014 from the user submitting an ES|QL query to the badges rendering.",
+      "expected_output": "Traces: user submits ES|QL \u2192 viewer appends `| METRICS_INFO` via buildMetricsInfoQuery (kbn-esql-utils) \u2192 useFetchMetricsData fires the request \u2192 parseMetricsWithTelemetry parses the response (filters by ALLOWED_METRIC_TYPES, hides internal dimensions) into ParsedMetricItem (units[], metricTypes[], fieldTypes[], dimensionFields[]) \u2192 flyout/tabs/overview_tab_metadata.tsx renders badge groups. Description specifically comes from @kbn/fields-metadata-plugin via fields_metadata_provider.tsx, NOT from METRICS_INFO.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "mentions-METRICS_INFO-internal-append",
+          "description": "Notes that the viewer appends `| METRICS_INFO` to the user's query internally, via buildMetricsInfoQuery (or equivalent) \u2014 users do not type it"
+        },
+        {
+          "name": "cites-parseMetricsWithTelemetry-parser",
+          "description": "Names parseMetricsWithTelemetry (or parse_metrics_response_with_telemetry.ts) as the parser, and mentions ALLOWED_METRIC_TYPES filtering and/or internal-dimension hiding"
+        },
+        {
+          "name": "cites-ParsedMetricItem-shape",
+          "description": "Names the parsed shape (ParsedMetricItem in types.ts) and at least 2-3 of its fields: units[], metricTypes[], fieldTypes[], dimensionFields[]"
+        },
+        {
+          "name": "correctly-attributes-description-to-fields-metadata",
+          "description": "Knows that descriptions come from @kbn/fields-metadata-plugin (via fields_metadata_provider.tsx), NOT from METRICS_INFO; type/unit/dimensions come from METRICS_INFO"
+        },
+        {
+          "name": "references-overview-tab-metadata-component",
+          "description": "Points at flyout/tabs/overview_tab_metadata.tsx (or the flyout overview tab) as the badge-rendering site"
+        }
+      ]
+    }
+  ]
+}

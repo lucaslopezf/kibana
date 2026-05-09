@@ -1,0 +1,67 @@
+{
+  "skill_name": "metrics-discover-e2e",
+  "evals": [
+    {
+      "id": 0,
+      "name": "breakdown-spec",
+      "prompt": "Write a Scout UI spec that verifies selecting `dimension_0` in the metrics-grid breakdown toolbar splits the chart series. Outline the file location, page objects to use, data view setup, and the structure of the spec.",
+      "expected_output": "Places the new spec under src/platform/plugins/shared/discover/test/scout/ui/parallel_tests/metrics_experience/, models on breakdown_by_dimension.spec.ts, uses pageObjects.discover for shared actions (writeAndSubmitEsqlQuery, optionally addBreakdownFieldFromSidebar) and pageObjects.metricsExperience.breakdownSelector for the metrics-specific assertion (selectDimension, getToggleWithSelection), reuses the existing test-metrics-experience TSDB index and metrics_data_view.json archive, tags for stateful + serverless, and explicitly notes that the breakdown selector splits chart series rather than reducing card count (so 'filter' framing is the wrong semantic).",
+      "files": [],
+      "assertions": [
+        {
+          "name": "correct-spec-location",
+          "description": "Places the new spec under src/platform/plugins/shared/discover/test/scout/ui/parallel_tests/metrics_experience/"
+        },
+        {
+          "name": "models-on-existing-breakdown-spec",
+          "description": "Recommends modeling on breakdown_by_dimension.spec.ts (the closest existing spec for breakdown work)"
+        },
+        {
+          "name": "cites-discover-PO-for-shared-actions",
+          "description": "Uses pageObjects.discover for shared actions (writeAndSubmitEsqlQuery, addBreakdownFieldFromSidebar, etc.) \u2014 does not wrap them in a metrics-local helper"
+        },
+        {
+          "name": "uses-breakdownSelector-PO-for-metrics-specific",
+          "description": "Uses metricsExperience.breakdownSelector (selectDimension and/or getToggleWithSelection) for the metrics-specific assertion, not raw selectors or a one-off helper"
+        },
+        {
+          "name": "notes-breakdown-splits-not-filters",
+          "description": "Gets the semantic right: the breakdown selector splits chart series by the chosen dimension, it does not reduce/filter the number of cards. A 'filter' framing is wrong and the spec should not assert on card count change."
+        },
+        {
+          "name": "reuses-existing-data-view",
+          "description": "Reuses test-metrics-experience TSDB index and metrics_data_view.json archive \u2014 does not introduce a new index"
+        },
+        {
+          "name": "tags-stateful-and-serverless",
+          "description": "Tags the spec for both stateful and serverless"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "triage-flaky",
+      "prompt": "fullscreen.spec.ts in the metrics_experience Scout suite has been flaky on main this week. Triage it for me.",
+      "expected_output": "First step is to pull Buildkite logs (mentions the buildkite-logs skill) to read the actual Playwright trace before guessing. Lists common metrics-suite causes: time-range drift in the TSDB indices (fixed window in global.setup.ts), page-object selector breakage from kbn-unified-chart-section-viewer changes. Explicitly says do NOT quick-skip the spec.",
+      "files": [],
+      "assertions": [
+        {
+          "name": "starts-with-buildkite-logs",
+          "description": "First step is to pull Buildkite logs / Playwright trace before guessing \u2014 mentions the buildkite-logs skill or equivalent"
+        },
+        {
+          "name": "mentions-time-range-drift",
+          "description": "Lists time-range drift in the TSDB indices (fixed window from global.setup.ts) as a common cause"
+        },
+        {
+          "name": "mentions-cross-package-selector-breakage",
+          "description": "Lists page-object selector breakage from kbn-unified-chart-section-viewer (data-test-subj) changes as a common cause"
+        },
+        {
+          "name": "explicitly-do-not-skip",
+          "description": "Explicitly says do NOT quick-skip the spec \u2014 fix the underlying code"
+        }
+      ]
+    }
+  ]
+}
