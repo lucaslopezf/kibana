@@ -52,21 +52,20 @@ export const OverviewTab = ({ metricItem, description }: OverviewTabProps) => {
   });
   const renderStreamField = useStreamsFieldRenderer();
 
-  const streamSection =
-    localIndexName && sourceKind === METRIC_SOURCE_KIND.DATA_STREAM && renderStreamField
-      ? renderStreamField({ streamName: localIndexName })
-      : null;
-
-  const staticIndexName = useMemo(() => {
-    if (streamSection || !metricItem.dataStream) {
+  const sourceRow = useMemo(() => {
+    if (!metricItem.dataStream) {
       return undefined;
     }
-
+    const streamLink =
+      localIndexName && sourceKind === METRIC_SOURCE_KIND.DATA_STREAM && renderStreamField
+        ? renderStreamField({ streamName: localIndexName })
+        : undefined;
     return {
       indexName: metricItem.dataStream,
       kind: sourceKind,
+      streamLink,
     };
-  }, [metricItem.dataStream, sourceKind, streamSection]);
+  }, [metricItem.dataStream, localIndexName, sourceKind, renderStreamField]);
 
   // Sort dimensions alphabetically by name
   const sortedDimensions = useMemo(() => {
@@ -110,9 +109,7 @@ export const OverviewTab = ({ metricItem, description }: OverviewTabProps) => {
     <div data-test-subj="metricsExperienceFlyoutOverviewTabContent">
       <TabTitleAndDescription metricItem={metricItem} description={description} />
 
-      {streamSection}
-
-      <OverviewTabMetadata metricItem={metricItem} staticIndexName={staticIndexName} />
+      <OverviewTabMetadata metricItem={metricItem} sourceRow={sourceRow} />
 
       {metricItem.dimensionFields && metricItem.dimensionFields.length > 0 && (
         <>
