@@ -1,0 +1,262 @@
+input_question,output_expected,meta_esql_queries,meta_domain
+Build an observability dashboard with the data I have in the cluster,"A multi-panel observability dashboard covering the main system signals:
+- Average CPU usage (%)
+- Average memory used (%)
+- Network throughput (rx and tx bytes per second)
+- Filesystem used (%)
+- Load average 1m
+- Log error count over time","```
+TS metrics-system.cpu-*
+| STATS avg_cpu_pct = AVG(AVG_OVER_TIME(system.cpu.total.norm.pct))
+```
+
+```
+TS metrics-system.memory-*
+| STATS avg_memory_used_pct = AVG(AVG_OVER_TIME(system.memory.actual.used.pct))
+```
+
+```
+TS metrics-system.network-*
+| STATS rx_bytes_per_sec = SUM(RATE(system.network.in.bytes)), tx_bytes_per_sec = SUM(RATE(system.network.out.bytes))
+```
+
+```
+TS metrics-system.filesystem-*
+| STATS avg_filesystem_used_pct = AVG(AVG_OVER_TIME(system.filesystem.used.pct))
+```
+
+```
+TS metrics-system.load-*
+| STATS avg_load_1m = AVG(AVG_OVER_TIME(system.load.1))
+```
+
+```
+FROM logs-*
+| WHERE log.level == ""error""
+| STATS error_count = COUNT(*) BY bucket = BUCKET(@timestamp, 1 hour)
+| SORT bucket ASC
+```",observability
+Create an observability overview dashboard for my hosts,"A host-centric overview dashboard:
+- Top 10 hosts by CPU usage
+- Top 10 hosts by memory used (%)
+- Network throughput by host
+- Filesystem used (%) by host
+- Load average by host","```
+TS metrics-system.cpu-*
+| STATS avg_cpu_pct = AVG(AVG_OVER_TIME(system.cpu.total.norm.pct)) BY host.name
+| SORT avg_cpu_pct DESC
+| LIMIT 10
+```
+
+```
+TS metrics-system.memory-*
+| STATS avg_memory_used_pct = AVG(AVG_OVER_TIME(system.memory.actual.used.pct)) BY host.name
+| SORT avg_memory_used_pct DESC
+| LIMIT 10
+```
+
+```
+TS metrics-system.network-*
+| STATS rx_bytes_per_sec = SUM(RATE(system.network.in.bytes)), tx_bytes_per_sec = SUM(RATE(system.network.out.bytes)) BY host.name
+| SORT rx_bytes_per_sec DESC
+| LIMIT 10
+```
+
+```
+TS metrics-system.filesystem-*
+| STATS avg_filesystem_used_pct = AVG(AVG_OVER_TIME(system.filesystem.used.pct)) BY host.name
+| SORT avg_filesystem_used_pct DESC
+| LIMIT 10
+```
+
+```
+TS metrics-system.load-*
+| STATS avg_load_1m = AVG(AVG_OVER_TIME(system.load.1)) BY host.name
+| SORT avg_load_1m DESC
+| LIMIT 10
+```",observability
+Create a CPU performance dashboard,"A CPU-focused dashboard:
+- Total CPU usage (%)
+- CPU breakdown by state (user / system / iowait)
+- Top 10 hosts by CPU usage
+- CPU usage over time","```
+TS metrics-system.cpu-*
+| STATS avg_cpu_pct = AVG(AVG_OVER_TIME(system.cpu.total.norm.pct))
+```
+
+```
+TS metrics-system.cpu-*
+| STATS user_pct = AVG(AVG_OVER_TIME(system.cpu.user.pct)), system_pct = AVG(AVG_OVER_TIME(system.cpu.system.pct)), iowait_pct = AVG(AVG_OVER_TIME(system.cpu.iowait.pct))
+```
+
+```
+TS metrics-system.cpu-*
+| STATS avg_cpu_pct = AVG(AVG_OVER_TIME(system.cpu.total.norm.pct)) BY host.name
+| SORT avg_cpu_pct DESC
+| LIMIT 10
+```
+
+```
+TS metrics-system.cpu-*
+| STATS avg_cpu_pct = AVG(AVG_OVER_TIME(system.cpu.total.norm.pct)) BY bucket = TBUCKET(5 minute)
+| SORT bucket ASC
+```",observability
+Build a memory utilization dashboard,"A memory-focused dashboard:
+- Average memory used (%)
+- Average memory used (bytes)
+- Top 10 hosts by memory used (%)
+- Memory usage over time","```
+TS metrics-system.memory-*
+| STATS avg_memory_used_pct = AVG(AVG_OVER_TIME(system.memory.actual.used.pct))
+```
+
+```
+TS metrics-system.memory-*
+| STATS avg_memory_used_bytes = AVG(AVG_OVER_TIME(system.memory.actual.used.bytes))
+```
+
+```
+TS metrics-system.memory-*
+| STATS avg_memory_used_pct = AVG(AVG_OVER_TIME(system.memory.actual.used.pct)) BY host.name
+| SORT avg_memory_used_pct DESC
+| LIMIT 10
+```
+
+```
+TS metrics-system.memory-*
+| STATS avg_memory_used_pct = AVG(AVG_OVER_TIME(system.memory.actual.used.pct)) BY bucket = TBUCKET(5 minute)
+| SORT bucket ASC
+```",observability
+Make a network traffic dashboard,"A network-focused dashboard:
+- Total received bytes over the window
+- Total transmitted bytes over the window
+- Throughput broken down by interface (bytes per second)
+- Top 10 hosts by network throughput","```
+TS metrics-system.network-*
+| STATS total_rx_bytes = SUM(INCREASE(system.network.in.bytes))
+```
+
+```
+TS metrics-system.network-*
+| STATS total_tx_bytes = SUM(INCREASE(system.network.out.bytes))
+```
+
+```
+TS metrics-system.network-*
+| STATS rx_bytes_per_sec = SUM(RATE(system.network.in.bytes)), tx_bytes_per_sec = SUM(RATE(system.network.out.bytes)) BY system.network.name
+```
+
+```
+TS metrics-system.network-*
+| STATS total_throughput_bps = SUM(RATE(system.network.in.bytes)) + SUM(RATE(system.network.out.bytes)) BY host.name
+| SORT total_throughput_bps DESC
+| LIMIT 10
+```",observability
+Show me a disk/filesystem dashboard,"A filesystem-focused dashboard:
+- Used (%) per mount point
+- Top 10 fullest filesystems by host and mount point
+- Filesystem used (%) over time","```
+TS metrics-system.filesystem-*
+| STATS avg_used_pct = AVG(AVG_OVER_TIME(system.filesystem.used.pct)) BY system.filesystem.mount_point
+| SORT avg_used_pct DESC
+```
+
+```
+TS metrics-system.filesystem-*
+| STATS avg_used_pct = AVG(AVG_OVER_TIME(system.filesystem.used.pct)) BY host.name, system.filesystem.mount_point
+| SORT avg_used_pct DESC
+| LIMIT 10
+```
+
+```
+TS metrics-system.filesystem-*
+| STATS avg_used_pct = AVG(AVG_OVER_TIME(system.filesystem.used.pct)) BY bucket = TBUCKET(5 minute)
+| SORT bucket ASC
+```",observability
+Create a logs overview dashboard,"A logs-focused dashboard:
+- Log volume over time
+- Log count by log.level
+- Top 10 services by error count
+- Top 10 most frequent error messages","```
+FROM logs-*
+| STATS log_count = COUNT(*) BY bucket = BUCKET(@timestamp, 5 minute)
+| SORT bucket ASC
+```
+
+```
+FROM logs-*
+| STATS log_count = COUNT(*) BY log.level
+| SORT log_count DESC
+```
+
+```
+FROM logs-*
+| WHERE log.level == ""error""
+| STATS error_count = COUNT(*) BY service.name
+| SORT error_count DESC
+| LIMIT 10
+```
+
+```
+FROM logs-*
+| WHERE log.level == ""error""
+| STATS error_count = COUNT(*) BY message
+| SORT error_count DESC
+| LIMIT 10
+```",observability
+Can you include the system.cpu.load?,"Add a single panel showing load average over time: system.load.1, system.load.5, and system.load.15 from metrics-system.load-*.","```
+TS metrics-system.load-*
+| STATS load_1m = AVG(AVG_OVER_TIME(system.load.1)), load_5m = AVG(AVG_OVER_TIME(system.load.5)), load_15m = AVG(AVG_OVER_TIME(system.load.15)) BY bucket = TBUCKET(5 minute)
+| SORT bucket ASC
+```",observability
+Add a panel for top 10 hosts by CPU usage,"Add a single panel: top 10 hosts ranked by average CPU usage (%) from metrics-system.cpu-*, grouped by host.name.","```
+TS metrics-system.cpu-*
+| STATS avg_cpu_pct = AVG(AVG_OVER_TIME(system.cpu.total.norm.pct)) BY host.name
+| SORT avg_cpu_pct DESC
+| LIMIT 10
+```",observability
+Add network traffic broken down by interface,Add a single panel: rx and tx throughput (bytes per second) from metrics-system.network-* grouped by system.network.name (interface).,"```
+TS metrics-system.network-*
+| STATS rx_bytes_per_sec = SUM(RATE(system.network.in.bytes)), tx_bytes_per_sec = SUM(RATE(system.network.out.bytes)) BY system.network.name
+| SORT rx_bytes_per_sec DESC
+```",observability
+The metrics summary section is missing titles for some of the widgets making it unclear if it is for Logs or Metrics,"Rebuild the metrics summary section with explicit, unambiguous panel titles that distinguish Logs vs Metrics. At minimum:
+- A panel titled ""Metrics - CPU usage (%)"" sourced from metrics-system.cpu-*
+- A panel titled ""Logs - Error rate"" sourced from logs-*
+Every widget in the summary section must have a title that names both the signal type (Logs or Metrics) and the metric/field being shown.","```
+TS metrics-system.cpu-*
+| STATS avg_cpu_pct = AVG(AVG_OVER_TIME(system.cpu.total.norm.pct)) BY bucket = TBUCKET(5 minute)
+| SORT bucket ASC
+```
+
+```
+FROM logs-*
+| WHERE log.level == ""error""
+| STATS error_count = COUNT(*) BY bucket = BUCKET(@timestamp, 5 minute)
+| SORT bucket ASC
+```",observability
+"The CPU panel only shows one host, can you split it by host.name?",Replace the existing CPU panel with a time series of CPU usage (%) grouped by host.name so each host appears as its own series.,"```
+TS metrics-system.cpu-*
+| STATS avg_cpu_pct = AVG(AVG_OVER_TIME(system.cpu.total.norm.pct)) BY host.name, bucket = TBUCKET(5 minute)
+| SORT bucket ASC
+```",observability
+Show me logs and metrics for my app,"Two complementary panels:
+- Error log count over time from logs-* (filtered to log.level == ""error"")
+- Average host CPU usage (%) over time from metrics-system.cpu-*","```
+FROM logs-*
+| WHERE log.level == ""error""
+| STATS error_count = COUNT(*) BY bucket = BUCKET(@timestamp, 5 minute)
+| SORT bucket ASC
+```
+
+```
+TS metrics-system.cpu-*
+| STATS avg_cpu_pct = AVG(AVG_OVER_TIME(system.cpu.total.norm.pct)) BY bucket = TBUCKET(5 minute)
+| SORT bucket ASC
+```",observability
+Visualize the load average for the last hour,"A single panel showing system.load.1, system.load.5, and system.load.15 from metrics-system.load-* over the last hour.","```
+TS metrics-system.load-*
+| WHERE @timestamp >= NOW() - 1 hour
+| STATS load_1m = AVG(AVG_OVER_TIME(system.load.1)), load_5m = AVG(AVG_OVER_TIME(system.load.5)), load_15m = AVG(AVG_OVER_TIME(system.load.15)) BY bucket = TBUCKET(1 minute)
+| SORT bucket ASC
+```",observability
