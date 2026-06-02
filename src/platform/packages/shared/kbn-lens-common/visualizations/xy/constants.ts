@@ -18,6 +18,7 @@ export const SeriesTypes = {
   BAR: 'bar',
   LINE: 'line',
   AREA: 'area',
+  SCATTER: 'scatter',
   BAR_STACKED: 'bar_stacked',
   AREA_STACKED: 'area_stacked',
   BAR_HORIZONTAL: 'bar_horizontal',

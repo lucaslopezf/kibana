@@ -25,4 +25,13 @@ export const commonDecorationConfigArgs: CommonDecorationConfigFn['args'] = {
     types: ['string'],
     help: strings.getColorHelp(),
   },
+  pointShape: {
+    types: ['string'],
+    options: ['circle', 'triangle', 'square', 'diamond', 'plus', 'x'],
+    help: 'Point marker shape for the series points of this accessor.',
+  },
+  pointsRadius: {
+    types: ['number'],
+    help: 'Point marker radius (px) for the series points of this accessor.',
+  },
 };

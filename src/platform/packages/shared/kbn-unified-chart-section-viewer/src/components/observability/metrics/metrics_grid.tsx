@@ -23,6 +23,7 @@ import { MetricInsightsFlyout } from '../../flyout';
 import { EmptyState } from '../../empty_state/empty_state';
 import { useGridNavigation } from '../../../hooks/use_grid_navigation';
 import { FieldsMetadataProvider } from '../../../context/fields_metadata';
+import { ExemplarsProvider } from '../../../common/exemplars';
 import { createESQLQuery, firstNonNullable, getMetricUniqueKey } from '../../../common/utils';
 import {
   ACTION_COPY_TO_DASHBOARD,
@@ -43,7 +44,7 @@ const METRICS_QUICK_ACTION_IDS: QuickActionIds = [
 
 export type MetricsGridProps = Pick<
   UnifiedMetricsGridProps,
-  'services' | 'onBrushEnd' | 'onFilter' | 'fetchParams' | 'actions'
+  'services' | 'onBrushEnd' | 'onFilter' | 'fetchParams' | 'actions' | 'openTraceById'
 > & {
   dimensions: Dimension[];
   searchTerm?: string;
@@ -85,6 +86,7 @@ export const MetricsGrid = ({
   getUserMessages,
   getDescription,
   isTabSelected,
+  openTraceById,
 }: MetricsGridProps) => {
   const gridRef = useRef<HTMLDivElement>(null);
   const { euiTheme } = useEuiTheme();
@@ -171,79 +173,82 @@ export const MetricsGrid = ({
   }
 
   return (
-    <FieldsMetadataProvider fields={metricItems} services={services}>
-      <A11yGridWrapper
-        ref={gridRef}
-        gridRows={gridRows}
-        gridColumns={gridColumns}
-        onKeyDown={handleKeyDown}
-      >
-        <EuiFlexGrid
-          gutterSize="s"
-          css={css`
-            grid-template-columns: repeat(${Math.min(columns, 4)}, 1fr);
-            @container (max-width: ${euiTheme.breakpoint.xl}px) {
-              grid-template-columns: repeat(${Math.min(columns, 3)}, 1fr);
-            }
-            @container (max-width: ${euiTheme.breakpoint.l}px) {
-              grid-template-columns: repeat(${Math.min(columns, 2)}, 1fr);
-            }
-            @container (max-width: ${euiTheme.breakpoint.s}px) {
-              grid-template-columns: repeat(${Math.min(columns, 1)}, 1fr);
-            }
-          `}
+    <ExemplarsProvider>
+      <FieldsMetadataProvider fields={metricItems} services={services}>
+        <A11yGridWrapper
+          ref={gridRef}
+          gridRows={gridRows}
+          gridColumns={gridColumns}
+          onKeyDown={handleKeyDown}
         >
-          {metricItems.map((metricItem, index) => {
-            const id = getItemKey(metricItem, index);
-            const { rowIndex, colIndex } = getRowColFromIndex(index);
-            const isFocused =
-              focusedCell.rowIndex === rowIndex && focusedCell.colIndex === colIndex;
+          <EuiFlexGrid
+            gutterSize="s"
+            css={css`
+              grid-template-columns: repeat(${Math.min(columns, 4)}, 1fr);
+              @container (max-width: ${euiTheme.breakpoint.xl}px) {
+                grid-template-columns: repeat(${Math.min(columns, 3)}, 1fr);
+              }
+              @container (max-width: ${euiTheme.breakpoint.l}px) {
+                grid-template-columns: repeat(${Math.min(columns, 2)}, 1fr);
+              }
+              @container (max-width: ${euiTheme.breakpoint.s}px) {
+                grid-template-columns: repeat(${Math.min(columns, 1)}, 1fr);
+              }
+            `}
+          >
+            {metricItems.map((metricItem, index) => {
+              const id = getItemKey(metricItem, index);
+              const { rowIndex, colIndex } = getRowColFromIndex(index);
+              const isFocused =
+                focusedCell.rowIndex === rowIndex && focusedCell.colIndex === colIndex;
 
-            return (
-              <EuiFlexItem key={id}>
-                <ChartItem
-                  id={id}
-                  index={index}
-                  metricItem={metricItem}
-                  size="s"
-                  dimensions={dimensions}
-                  services={services}
-                  onBrushEnd={onBrushEnd}
-                  onFilter={onFilter}
-                  actions={actions}
-                  fetchParams={fetchParams}
-                  discoverFetch$={discoverFetch$}
-                  rowIndex={rowIndex}
-                  colIndex={colIndex}
-                  isFocused={isFocused}
-                  onFocusCell={handleFocusCell}
-                  onViewDetails={handleViewDetails}
-                  searchTerm={searchTerm}
-                  whereStatements={whereStatements}
-                  userSource={userSource}
-                  description={getDescription?.(metricItem)}
-                  userMessages={getUserMessages ? getUserMessages(metricItem) : undefined}
-                />
-              </EuiFlexItem>
-            );
-          })}
-        </EuiFlexGrid>
-      </A11yGridWrapper>
-      {flyoutData && isTabSelected && (
-        <MetricInsightsFlyout
-          metricItem={flyoutData.metricItem}
-          esqlQuery={flyoutData.esqlQuery}
-          onClose={handleCloseFlyout}
-        />
-      )}
-    </FieldsMetadataProvider>
+              return (
+                <EuiFlexItem key={id}>
+                  <ChartItem
+                    id={id}
+                    index={index}
+                    metricItem={metricItem}
+                    size="s"
+                    dimensions={dimensions}
+                    services={services}
+                    onBrushEnd={onBrushEnd}
+                    onFilter={onFilter}
+                    actions={actions}
+                    fetchParams={fetchParams}
+                    discoverFetch$={discoverFetch$}
+                    rowIndex={rowIndex}
+                    colIndex={colIndex}
+                    isFocused={isFocused}
+                    onFocusCell={handleFocusCell}
+                    onViewDetails={handleViewDetails}
+                    searchTerm={searchTerm}
+                    whereStatements={whereStatements}
+                    userSource={userSource}
+                    description={getDescription?.(metricItem)}
+                    userMessages={getUserMessages ? getUserMessages(metricItem) : undefined}
+                    openTraceById={openTraceById}
+                  />
+                </EuiFlexItem>
+              );
+            })}
+          </EuiFlexGrid>
+        </A11yGridWrapper>
+        {flyoutData && isTabSelected && (
+          <MetricInsightsFlyout
+            metricItem={flyoutData.metricItem}
+            esqlQuery={flyoutData.esqlQuery}
+            onClose={handleCloseFlyout}
+          />
+        )}
+      </FieldsMetadataProvider>
+    </ExemplarsProvider>
   );
 };
 
 interface ChartItemProps
   extends Pick<
     UnifiedMetricsGridProps,
-    'services' | 'onBrushEnd' | 'onFilter' | 'fetchParams' | 'actions'
+    'services' | 'onBrushEnd' | 'onFilter' | 'fetchParams' | 'actions' | 'openTraceById'
   > {
   id: string;
   metricItem: ParsedMetricItem;
@@ -286,8 +291,9 @@ const ChartItem = React.memo(
     onFocusCell,
     onViewDetails,
     userMessages,
+    openTraceById,
   }: ChartItemProps) => {
-    const { profileId } = useMetricsExperienceState();
+    const { profileId, showExemplars } = useMetricsExperienceState();
     const { euiTheme } = useEuiTheme();
     const colorPalette = useMemo(
       () => Object.values(euiTheme.colors.vis).slice(0, 10),
@@ -314,7 +320,14 @@ const ChartItem = React.memo(
     }, [metricItem, applicableDimensions, whereStatements, userSource]);
 
     const color = useMemo(() => colorPalette[index % colorPalette.length], [index, colorPalette]);
-    const chartLayers = useChartLayers({ dimensions: applicableDimensions, metricItem, color });
+    const chartLayers = useChartLayers({
+      dimensions: applicableDimensions,
+      metricItem,
+      color,
+      showExemplars,
+      fetchParams,
+      whereStatements,
+    });
     const handleViewDetailsCallback = useCallback(
       () => onViewDetails(index, esqlQuery, metricItem),
       [index, esqlQuery, metricItem, onViewDetails]
@@ -350,6 +363,7 @@ const ChartItem = React.memo(
           quickActionIds={METRICS_QUICK_ACTION_IDS}
           userMessages={userMessages}
           profileId={profileId}
+          openTraceById={openTraceById}
         />
       </A11yGridCell>
     );

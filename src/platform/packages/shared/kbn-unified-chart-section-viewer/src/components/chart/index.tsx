@@ -11,11 +11,13 @@ import { EuiFlexGroup, EuiFlexItem, EuiLoadingChart, useEuiTheme } from '@elasti
 import { css } from '@emotion/react';
 import type { LensSeriesLayer, LensYBoundsConfig } from '@kbn/lens-embeddable-utils';
 import { useBoolean } from '@kbn/react-hooks';
-import React, { useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import type { EmbeddableComponentProps } from '@kbn/lens-plugin/public';
 import { useLensProps } from './hooks/use_lens_props';
 import type { LensWrapperProps } from './lens_wrapper';
 import { LensWrapper } from './lens_wrapper';
+import type { ExemplarClickData } from '../../common/exemplars';
+import { ExemplarPopover } from '../exemplar_popover/exemplar_popover';
 import type { UnifiedMetricsGridProps } from '../../types';
 
 export const ChartSizes = {
@@ -25,7 +27,7 @@ export const ChartSizes = {
 
 export type ChartSize = keyof typeof ChartSizes;
 export type ChartProps = Pick<UnifiedMetricsGridProps, 'fetchParams'> &
-  Omit<LensWrapperProps, 'lensProps' | 'abortController'> & {
+  Omit<LensWrapperProps, 'lensProps' | 'abortController' | 'onExemplarClick'> & {
     size?: ChartSize;
     discoverFetch$: UnifiedMetricsGridProps['fetch$'];
     esqlQuery: string;
@@ -38,6 +40,7 @@ export type ChartProps = Pick<UnifiedMetricsGridProps, 'fetchParams'> &
     userMessages?: EmbeddableComponentProps['userMessages'];
     profileId: string;
     id: string;
+    openTraceById?: (traceId: string) => void;
   };
 
 const LensWrapperMemo = React.memo(LensWrapper);
@@ -65,9 +68,23 @@ export const Chart = ({
   userMessages,
   profileId,
   id,
+  openTraceById,
 }: ChartProps) => {
   const chartRef = useRef<HTMLDivElement>(null);
   const { euiTheme } = useEuiTheme();
+
+  const [exemplarData, setExemplarData] = useState<ExemplarClickData | null>(null);
+  const handleExemplarClick = useCallback((data: ExemplarClickData) => {
+    setExemplarData(data);
+  }, []);
+  const handleClosePopover = useCallback(() => setExemplarData(null), []);
+
+  const handleOpenInAPM = useCallback(
+    (traceId: string) => {
+      window.open(`/app/apm/link-to/trace/${encodeURIComponent(traceId)}`, '_blank');
+    },
+    []
+  );
 
   const [isSaveModalVisible, { toggle: toggleSaveModalVisible }] = useBoolean(false);
   const { SaveModalComponent } = services.lens;
@@ -113,7 +130,27 @@ export const Chart = ({
             syncTooltips={syncTooltips}
             extraDisabledActions={extraDisabledActions}
             quickActionIds={quickActionIds}
+            onExemplarClick={handleExemplarClick}
           />
+          {exemplarData && (
+            <ExemplarPopover
+              data={exemplarData}
+              anchor={
+                <span
+                  style={{
+                    position: 'absolute',
+                    bottom: '50%',
+                    left: '50%',
+                    width: 1,
+                    height: 1,
+                  }}
+                />
+              }
+              onClose={handleClosePopover}
+              onOpenTraceFlyout={openTraceById}
+              onOpenInAPM={handleOpenInAPM}
+            />
+          )}
           {isSaveModalVisible && (
             <SaveModalComponent
               initialInput={{ attributes: lensProps.attributes }}

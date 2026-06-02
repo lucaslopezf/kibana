@@ -57,6 +57,16 @@ export interface YConfig {
   iconPosition?: IconPosition;
   textVisibility?: boolean;
   axisMode?: YAxisMode;
+  /**
+   * Point marker shape for the points of this accessor. Defaults to circle.
+   * Only meaningful for line/area/scatter series with points visible.
+   */
+  pointShape?: 'circle' | 'triangle' | 'square' | 'diamond' | 'plus' | 'x';
+  /**
+   * Point marker radius (px) for the points of this accessor. Overrides the
+   * layer-level `pointsRadius`. Only meaningful when points are visible.
+   */
+  pointsRadius?: number;
 }
 
 export interface XYDataLayerConfig {

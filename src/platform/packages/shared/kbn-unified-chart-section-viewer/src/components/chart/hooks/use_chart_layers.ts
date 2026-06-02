@@ -19,6 +19,8 @@ import {
   firstNonNullable,
   resolveMetricUnit,
 } from '../../../common/utils';
+import { isExemplarEligible } from '../../../common/utils/metric_eligibility';
+import { useExemplars } from '../../../common/exemplars';
 
 /**
  * Narrow input describing only the metric fields that `useChartLayers` actually reads.
@@ -38,6 +40,9 @@ interface UseChartLayersParams {
   color?: string;
   seriesType?: LensSeriesLayer['seriesType'];
   customFunction?: string;
+  showExemplars?: boolean;
+  fetchParams?: { timeRange?: { from: string; to: string } };
+  whereStatements?: string[];
 }
 
 /**
@@ -51,7 +56,11 @@ export const useChartLayers = ({
   color,
   seriesType,
   customFunction,
+  showExemplars = false,
+  fetchParams,
+  whereStatements,
 }: UseChartLayersParams): LensSeriesLayer[] => {
+  const { getExemplarsQuery } = useExemplars();
   return useMemo((): LensSeriesLayer[] => {
     const fieldTypes = metricItem.fieldTypes;
     const instrument = firstNonNullable(metricItem.metricTypes);
@@ -69,26 +78,75 @@ export const useChartLayers = ({
     });
     const hasDimensions = dimensions.length > 0;
 
-    return [
-      {
-        type: 'series',
-        seriesType: seriesType || hasDimensions ? 'line' : 'area',
-        xAxis: {
-          field: createTimeBucketAggregation({}),
-          type: 'dateHistogram',
-        },
-        yAxis: [
-          {
-            value: metricField,
-            label: metricField,
-            compactValues: true,
-            seriesColor: color,
-            ...(resolvedUnit ? getLensMetricFormat(resolvedUnit) : {}),
-          },
-        ],
-        breakdown: hasDimensions ? dimensions.map((dim) => dim.name) : undefined,
+    const metricLayer: LensSeriesLayer = {
+      type: 'series',
+      seriesType: seriesType || hasDimensions ? 'line' : 'area',
+      xAxis: {
+        field: createTimeBucketAggregation({}),
+        type: 'dateHistogram',
       },
-    ];
+      yAxis: [
+        {
+          value: metricField,
+          label: metricField,
+          compactValues: true,
+          seriesColor: color,
+          ...(resolvedUnit ? getLensMetricFormat(resolvedUnit) : {}),
+        },
+      ],
+      breakdown: hasDimensions ? dimensions.map((dim) => dim.name) : undefined,
+    };
+
+    const eligible =
+      showExemplars &&
+      isExemplarEligible({ metricName: metricItem.metricName, units: metricItem.units });
+
+    if (!eligible) {
+      return [metricLayer];
+    }
+
+    const dimensionFilters = dimensions.reduce<Record<string, string>>((acc, dim) => {
+      return acc;
+    }, {});
+
+    const now = Date.now();
+    const exemplarsEsql = getExemplarsQuery({
+      start: fetchParams?.timeRange?.from
+        ? Date.parse(fetchParams.timeRange.from) || now - 3600_000
+        : now - 3600_000,
+      end: fetchParams?.timeRange?.to ? Date.parse(fetchParams.timeRange.to) || now : now,
+      metricName: metricItem.metricName,
+      dimensions: Object.keys(dimensionFilters).length > 0 ? dimensionFilters : undefined,
+    });
+
+    const exemplarLayer: LensSeriesLayer = {
+      type: 'series',
+      seriesType: 'scatter',
+      dataset: { esql: exemplarsEsql },
+      xAxis: {
+        field: '@timestamp',
+        type: 'dateHistogram',
+      },
+      yAxis: [
+        {
+          value: 'transaction.duration.us',
+          label: 'transaction.duration.us',
+          compactValues: false,
+          fromUnit: 'us',
+          toUnit: 'ms',
+          // Plot exemplar values on the right Y axis so they don't dominate
+          // the primary metric's scale (e.g. a 0-1 ratio chart).
+          axisMode: 'right',
+          // Differentiate exemplar dots from the metric series' default circle markers.
+          pointShape: 'triangle',
+          // Bigger triangles so exemplars read clearly against the metric line.
+          pointsRadius: 7,
+        },
+      ],
+      breakdown: ['trace.id'],
+    };
+
+    return [metricLayer, exemplarLayer];
   }, [
     color,
     customFunction,
@@ -98,5 +156,10 @@ export const useChartLayers = ({
     metricItem.metricName,
     metricItem.units,
     seriesType,
+    showExemplars,
+    fetchParams?.timeRange?.from,
+    fetchParams?.timeRange?.to,
+    getExemplarsQuery,
+    whereStatements,
   ]);
 };

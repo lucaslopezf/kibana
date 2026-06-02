@@ -33,3 +33,43 @@ export const getSeriesColor = (layer: CommonXYLayerConfig, accessor: string) => 
     null
   );
 };
+
+/**
+ * Returns the configured point marker shape for a given accessor, or undefined
+ * when the decoration does not override it. Unlike color, point shape applies
+ * even when a split accessor is present — a scatter overlay typically wants a
+ * distinct shape regardless of breakdown.
+ */
+export const getPointShape = (
+  layer: CommonXYLayerConfig,
+  accessor: string
+): DataDecorationConfig['pointShape'] => {
+  if (!isDataLayer(layer)) {
+    return undefined;
+  }
+  const decorations: DataDecorationConfig[] | undefined = layer.decorations as
+    | DataDecorationConfig[]
+    | undefined;
+  return decorations?.find((decorationConfig) => decorationConfig.forAccessor === accessor)
+    ?.pointShape;
+};
+
+/**
+ * Returns the configured point marker radius for a given accessor, or undefined
+ * when the decoration does not override it. Per-accessor radius takes precedence
+ * over the layer-level `pointsRadius` arg, allowing overlay layers to use a
+ * distinct dot size from the primary series.
+ */
+export const getPointRadius = (
+  layer: CommonXYLayerConfig,
+  accessor: string
+): DataDecorationConfig['pointsRadius'] => {
+  if (!isDataLayer(layer)) {
+    return undefined;
+  }
+  const decorations: DataDecorationConfig[] | undefined = layer.decorations as
+    | DataDecorationConfig[]
+    | undefined;
+  return decorations?.find((decorationConfig) => decorationConfig.forAccessor === accessor)
+    ?.pointsRadius;
+};

@@ -35,7 +35,13 @@ import { getDuplicateMetricNames } from './utils/get_duplicate_metric_names';
 export interface MetricsExperienceGridContentProps
   extends Pick<
     UnifiedMetricsGridProps,
-    'services' | 'fetchParams' | 'onBrushEnd' | 'onFilter' | 'actions' | 'histogramCss'
+    | 'services'
+    | 'fetchParams'
+    | 'onBrushEnd'
+    | 'onFilter'
+    | 'actions'
+    | 'histogramCss'
+    | 'openTraceById'
   > {
   discoverFetch$: UnifiedMetricsGridProps['fetch$'];
   metricItems: ParsedMetricItem[];
@@ -56,6 +62,7 @@ export const MetricsExperienceGridContent = ({
   histogramCss,
   isDiscoverLoading = false,
   isTabSelected,
+  openTraceById,
 }: MetricsExperienceGridContentProps) => {
   const { query } = fetchParams;
   const euiThemeContext = useEuiTheme();
@@ -149,6 +156,7 @@ export const MetricsExperienceGridContent = ({
           getUserMessages={getUserMessages}
           getDescription={getDescription}
           isTabSelected={isTabSelected}
+          openTraceById={openTraceById}
         />
       </EuiFlexItem>
       <EuiFlexItem grow={false}>

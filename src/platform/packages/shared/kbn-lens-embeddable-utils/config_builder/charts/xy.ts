@@ -145,6 +145,9 @@ function buildVisualizationState(config: LensXYConfig): XYVisualizationState {
             yConfig: layer.yAxis.map((yAxis, index) => ({
               forAccessor: `${ACCESSOR}${i}_${index}`,
               color: yAxis.seriesColor,
+              ...(yAxis.axisMode ? { axisMode: yAxis.axisMode } : {}),
+              ...(yAxis.pointShape ? { pointShape: yAxis.pointShape } : {}),
+              ...(yAxis.pointsRadius != null ? { pointsRadius: yAxis.pointsRadius } : {}),
             })),
           } as XYDataLayerConfig;
         }

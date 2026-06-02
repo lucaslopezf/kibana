@@ -125,6 +125,8 @@ describe('MetricsExperienceGridContent', () => {
       flyoutState: undefined,
       onFlyoutStateChange: jest.fn(),
       onFlyoutSelectedTabChange: jest.fn(),
+      showExemplars: false,
+      onToggleShowExemplars: jest.fn(),
       profileId: 'test-profile-id',
     });
 
@@ -188,6 +190,8 @@ describe('MetricsExperienceGridContent', () => {
       flyoutState: undefined,
       onFlyoutStateChange: jest.fn(),
       onFlyoutSelectedTabChange: jest.fn(),
+      showExemplars: false,
+      onToggleShowExemplars: jest.fn(),
       profileId: 'test-profile-id',
     });
 

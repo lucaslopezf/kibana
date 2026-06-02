@@ -81,6 +81,23 @@ export interface LensBaseLayer {
   randomSampling?: number;
   useGlobalFilter?: boolean;
   seriesColor?: string;
+  /**
+   * Which Y axis this accessor is plotted on. Defaults to `'left'`.
+   * Use `'right'` to assign a second-layer accessor to its own axis so it
+   * does not dominate the primary metric's scale (typical use: an overlay
+   * layer with values in a different unit).
+   */
+  axisMode?: 'left' | 'right';
+  /**
+   * Point marker shape for this accessor's rendered points. Useful for
+   * differentiating overlay layers from the primary series visually.
+   */
+  pointShape?: 'circle' | 'triangle' | 'square' | 'diamond' | 'plus' | 'x';
+  /**
+   * Point marker radius (px) for this accessor's rendered points. Overrides the
+   * layer-level default. Useful for emphasising overlay markers (e.g. exemplars).
+   */
+  pointsRadius?: number;
   value: LensLayerQuery;
 }
 
@@ -294,7 +311,7 @@ export type LensSeriesLayer = Identity<
     type: 'series';
     breakdown?: LensBreakdownConfig | LensBreakdownConfig[];
     xAxis?: LensBreakdownConfig;
-    seriesType: 'line' | 'bar' | 'area';
+    seriesType: 'line' | 'bar' | 'area' | 'scatter';
   }
 >;
 

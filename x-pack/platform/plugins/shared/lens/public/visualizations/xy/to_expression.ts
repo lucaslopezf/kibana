@@ -509,8 +509,9 @@ const dataLayerToExpression = (
         )
       : undefined,
     curveType,
-    seriesType: seriesType as SeriesType,
+    seriesType: (seriesType === 'scatter' ? 'line' : seriesType) as SeriesType,
     showLines: seriesType === 'line' || seriesType === 'area',
+    showPoints: seriesType === 'scatter' || undefined,
     accessors: layer.accessors,
     columnToLabel: JSON.stringify(columnToLabel),
     palette: buildExpression([
@@ -557,6 +558,8 @@ const yConfigToDataDecorationConfigExpression = (
       axisId,
       forAccessor: yConfig.forAccessor,
       color: yConfig.color ?? defaultColor,
+      ...(yConfig.pointShape ? { pointShape: yConfig.pointShape } : {}),
+      ...(yConfig.pointsRadius != null ? { pointsRadius: yConfig.pointsRadius } : {}),
     }
   );
   return buildExpression([dataDecorationConfigFn]).toAst();

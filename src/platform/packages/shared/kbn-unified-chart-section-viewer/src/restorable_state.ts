@@ -38,6 +38,9 @@ export interface MetricsExperienceRestorableState {
 
   // Open metric details flyout state, persisted across navigation.
   flyoutState?: FlyoutState;
+
+  // Whether the exemplar scatter layer is shown on eligible metric charts.
+  showExemplars: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface

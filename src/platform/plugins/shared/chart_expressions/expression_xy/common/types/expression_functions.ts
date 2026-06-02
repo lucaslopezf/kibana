@@ -127,6 +127,16 @@ export interface DataDecorationConfig {
   forAccessor: string;
   color?: string;
   axisId?: string;
+  /**
+   * Point marker shape for the points of this accessor's series.
+   * Falls back to circle when unset.
+   */
+  pointShape?: 'circle' | 'triangle' | 'square' | 'diamond' | 'plus' | 'x';
+  /**
+   * Point marker radius (px) for this accessor's series. Overrides the
+   * layer-level `pointsRadius` arg when defined.
+   */
+  pointsRadius?: number;
 }
 
 export interface DataLayerArgs {

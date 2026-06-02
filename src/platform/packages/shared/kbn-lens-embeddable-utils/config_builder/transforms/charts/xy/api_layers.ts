@@ -205,6 +205,7 @@ const seriesTypeFromStateToAPIMap: Record<SeriesType, DataLayerType['type']> = {
   bar_horizontal_stacked: 'bar_horizontal_stacked',
   bar_horizontal_percentage_stacked: 'bar_horizontal_percentage',
   line: 'line',
+  scatter: 'line',
   area: 'area',
   area_stacked: 'area_stacked',
   area_percentage_stacked: 'area_percentage',

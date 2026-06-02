@@ -36,7 +36,7 @@ import type {
 } from '../../common';
 import { AxisModes, SeriesTypes } from '../../common/constants';
 import type { FormatFactory } from '../types';
-import { getSeriesColor } from './state';
+import { getSeriesColor, getPointShape, getPointRadius } from './state';
 import type { ColorAssignments } from './color_assignment';
 import type { GroupsConfiguration } from './axes_configuration';
 import type { LayerAccessorsTitles, LayerFieldFormats, LayersFieldFormats } from './layers';
@@ -106,6 +106,7 @@ type GetPointConfigFn = (config: {
   showPoints?: boolean;
   pointVisibility?: PointVisibility;
   pointsRadius?: number;
+  pointShape?: 'circle' | 'triangle' | 'square' | 'diamond' | 'plus' | 'x';
 }) => Partial<AreaSeriesStyle['point']>;
 
 type GetLineConfigFn = (config: {
@@ -307,11 +308,13 @@ const getPointConfig: GetPointConfigFn = ({
   showPoints,
   pointVisibility,
   pointsRadius,
+  pointShape,
 }) => {
   return {
     visible: pointVisibility ?? (showPoints || markSizeAccessor ? 'always' : 'never'),
     radius: pointsRadius,
     fill: markSizeAccessor ? ColorVariant.Series : undefined,
+    ...(pointShape ? { shape: pointShape } : {}),
   };
 };
 
@@ -553,7 +556,10 @@ export const getSeriesProps: GetSeriesPropsFn = ({
         markSizeAccessor: markSizeColumnId,
         showPoints: layer.showPoints,
         pointVisibility,
-        pointsRadius: layer.pointsRadius,
+        pointsRadius:
+          getPointRadius(layer, Array.isArray(accessor) ? accessor[0] : accessor) ??
+          layer.pointsRadius,
+        pointShape: getPointShape(layer, Array.isArray(accessor) ? accessor[0] : accessor),
       }),
       ...(fillOpacity && { area: { opacity: fillOpacity } }),
       ...(emphasizeFitting && {
@@ -570,7 +576,10 @@ export const getSeriesProps: GetSeriesPropsFn = ({
         markSizeAccessor: markSizeColumnId,
         showPoints: layer.showPoints,
         pointVisibility,
-        pointsRadius: layer.pointsRadius,
+        pointsRadius:
+          getPointRadius(layer, Array.isArray(accessor) ? accessor[0] : accessor) ??
+          layer.pointsRadius,
+        pointShape: getPointShape(layer, Array.isArray(accessor) ? accessor[0] : accessor),
       }),
       ...(emphasizeFitting && { fit: { line: getFitLineConfig() } }),
       line: getLineConfig({ lineWidth: layer.lineWidth, showLines: layer.showLines }),

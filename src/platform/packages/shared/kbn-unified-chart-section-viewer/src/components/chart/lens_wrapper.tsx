@@ -11,10 +11,12 @@ import { useEuiTheme } from '@elastic/eui';
 import { css } from '@emotion/react';
 import { ACTION_INSPECT_PANEL, EmbeddableRendererContext } from '@kbn/embeddable-plugin/public';
 import type { QuickActionIds } from '@kbn/embeddable-plugin/public';
+import type { LensPublicCallbacks } from '@kbn/lens-common';
 import type { LensProps } from './hooks/use_lens_props';
 import { useLensExtraActions } from './hooks/use_lens_extra_actions';
 import { resolveEsqlVariables } from './helpers/resolve_esql_variables';
 import { ACTION_EXPLORE_IN_DISCOVER_TAB } from '../../common/constants';
+import type { ExemplarClickData } from '../../common/exemplars';
 import type { UnifiedMetricsGridProps } from '../../types';
 
 const DEFAULT_QUICK_ACTION_VIEW: QuickActionIds = [
@@ -34,6 +36,7 @@ export type LensWrapperProps = {
   disabledActions?: string[];
   extraDisabledActions?: string[];
   quickActionIds?: QuickActionIds;
+  onExemplarClick?: (data: ExemplarClickData) => void;
 } & Pick<UnifiedMetricsGridProps, 'services' | 'onBrushEnd' | 'onFilter'>;
 
 const DEFAULT_DISABLED_ACTIONS = ['ACTION_CUSTOMIZE_PANEL', 'ACTION_EXPORT_CSV', 'alertRule'];
@@ -51,6 +54,7 @@ export function LensWrapper({
   syncCursor,
   extraDisabledActions = [],
   quickActionIds,
+  onExemplarClick,
 }: LensWrapperProps) {
   const { euiTheme } = useEuiTheme();
 
@@ -106,6 +110,79 @@ export function LensWrapper({
     [resolvedQuery, lensProps.attributes.title, lensProps.timeRange, onExploreInDiscoverTab]
   );
 
+  const handleFilter = useCallback<NonNullable<LensPublicCallbacks['onFilter']>>(
+    (event) => {
+      if (onExemplarClick) {
+        // Multi-path resolver — Lens carries the source-field identity in different
+        // places depending on whether the textbased column mapper ran. See
+        // kbn-lens-embeddable-utils/config_builder/columns/value.ts (no meta on raw
+        // breakdown columns) and map_to_columns_fn_textbased.ts (adds sourceParams).
+        type ClickColumn =
+          import('@kbn/expressions-plugin/common').Datatable['columns'][number];
+        const getSourceField = (column: ClickColumn | undefined): string | undefined => {
+          if (!column) return undefined;
+          const fromSourceParams = (
+            column.meta?.sourceParams as { sourceField?: string } | undefined
+          )?.sourceField;
+          if (fromSourceParams) return fromSourceParams;
+          if (typeof column.meta?.field === 'string') return column.meta.field;
+          if (typeof column.name === 'string') return column.name;
+          if (typeof column.id === 'string') return column.id;
+          return undefined;
+        };
+
+        // event.data is an array — one entry per filter dimension. When the metric
+        // layer has its own breakdown AND the exemplar layer adds trace.id, the
+        // click produces multiple entries and the trace.id one is NOT at index 0.
+        // Iterate and pick the first single-click entry that resolves to trace.id.
+        for (const clickData of event.data) {
+          if (!clickData || !('column' in clickData)) continue;
+          // PoC: remove once intercept is stable.
+          // eslint-disable-next-line no-console
+          console.debug(
+            '[exemplars] click columns',
+            clickData.table.columns.map((c) => ({ id: c.id, name: c.name, meta: c.meta }))
+          );
+          const col = clickData.table.columns[clickData.column];
+          if (getSourceField(col) !== 'trace.id') continue;
+
+          event.preventDefault();
+          const row = clickData.table.rows[clickData.row] ?? {};
+          const labelFields = ['service.name', 'transaction.name', 'span.id'];
+          const labels = labelFields.reduce<Record<string, string>>((acc, field) => {
+            const colEntry = clickData.table.columns.find(
+              (c) => getSourceField(c) === field
+            );
+            if (colEntry && row[colEntry.id] != null) {
+              acc[field] = String(row[colEntry.id]);
+            }
+            return acc;
+          }, {});
+
+          const tsCol = clickData.table.columns.find(
+            (c) => getSourceField(c) === '@timestamp'
+          );
+          const durCol = clickData.table.columns.find(
+            (c) => getSourceField(c) === 'transaction.duration.us'
+          );
+
+          onExemplarClick({
+            traceId: String(clickData.value),
+            spanId: labels['span.id'],
+            timestamp: tsCol ? Number(row[tsCol.id]) : undefined,
+            durationMs: durCol ? Number(row[durCol.id]) / 1000 : undefined,
+            labels: Object.fromEntries(
+              Object.entries(labels).filter(([k]) => k !== 'span.id')
+            ),
+          });
+          return;
+        }
+      }
+      onFilter?.(event);
+    },
+    [onExemplarClick, onFilter]
+  );
+
   const extraActions = useLensExtraActions({
     copyToDashboard: onCopyToDashboard ? { onClick: onCopyToDashboard } : undefined,
     viewDetails: onViewDetails ? { onClick: onViewDetails } : undefined,
@@ -138,7 +215,7 @@ export function LensWrapper({
           disabledActions={disabledActions}
           withDefaultActions
           onBrushEnd={onBrushEnd}
-          onFilter={onFilter}
+          onFilter={handleFilter}
           syncTooltips={syncTooltips}
           syncCursor={syncCursor}
         />

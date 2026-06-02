@@ -188,7 +188,7 @@ describe('LensWrapper', () => {
           title: mockLensProps.attributes.title,
           ...mockLensProps,
           onBrushEnd,
-          onFilter,
+          onFilter: expect.any(Function),
           abortController,
           withDefaultActions: true,
           disabledActions: expect.arrayContaining([

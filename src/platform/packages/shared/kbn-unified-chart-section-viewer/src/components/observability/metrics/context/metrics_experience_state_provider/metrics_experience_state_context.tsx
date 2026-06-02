@@ -25,6 +25,7 @@ export interface MetricsExperienceStateContextValue extends MetricsExperienceRes
   onToggleFullscreen: () => void;
   onFlyoutStateChange: (value: FlyoutState | undefined) => void;
   onFlyoutSelectedTabChange: (value: FlyoutTabId) => void;
+  onToggleShowExemplars: () => void;
 }
 
 export const MetricsExperienceStateContext =
@@ -42,6 +43,7 @@ export function MetricsExperienceStateProvider({
   const [searchTerm, setSearchTerm] = useRestorableState('searchTerm', '');
   const [isFullscreen, setIsFullscreen] = useRestorableState('isFullscreen', false);
   const [flyoutState, setFlyoutState] = useRestorableState('flyoutState', undefined);
+  const [showExemplars, setShowExemplars] = useRestorableState('showExemplars', false);
 
   const onDimensionsChange = useCallback(
     (nextDimensions: Dimension[]) => {
@@ -87,6 +89,10 @@ export function MetricsExperienceStateProvider({
     [setFlyoutState]
   );
 
+  const onToggleShowExemplars = useCallback(() => {
+    setShowExemplars((prev) => !prev);
+  }, [setShowExemplars]);
+
   return (
     <MetricsExperienceStateContext.Provider
       value={{
@@ -96,12 +102,14 @@ export function MetricsExperienceStateProvider({
         searchTerm,
         selectedDimensions,
         flyoutState,
+        showExemplars,
         onPageChange,
         onDimensionsChange,
         onSearchTermChange,
         onToggleFullscreen,
         onFlyoutStateChange,
         onFlyoutSelectedTabChange,
+        onToggleShowExemplars,
       }}
     >
       {children}

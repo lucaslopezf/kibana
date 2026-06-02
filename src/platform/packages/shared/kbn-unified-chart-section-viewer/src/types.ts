@@ -30,6 +30,12 @@ export interface UnifiedMetricsGridProps extends ChartSectionProps {
    */
   profileId: string;
   /**
+   * Called when a user clicks "See trace" on an exemplar popover.
+   * The host is responsible for opening the trace in-app (e.g. UnifiedDocViewerFlyout)
+   * or navigating to the APM trace waterfall.
+   */
+  openTraceById?: (traceId: string) => void;
+  /**
    * Breakdown field from Discover's app state, synced from sidebar "Add Breakdown" action
    */
   breakdownField?: string;

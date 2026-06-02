@@ -8,7 +8,13 @@
  */
 
 import React, { useMemo } from 'react';
-import { useEuiTheme, useIsWithinMaxBreakpoint } from '@elastic/eui';
+import {
+  EuiFlexGroup,
+  EuiFlexItem,
+  EuiSwitch,
+  useEuiTheme,
+  useIsWithinMaxBreakpoint,
+} from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
 import type { IconButtonGroupProps } from '@kbn/shared-ux-button-toolbar';
 import { css } from '@emotion/react';
@@ -36,8 +42,14 @@ export const useToolbarActions = ({
   isLoading = false,
   metricItems,
 }: UseToolbarActionsProps) => {
-  const { selectedDimensions, onDimensionsChange, isFullscreen, onToggleFullscreen } =
-    useMetricsExperienceState();
+  const {
+    selectedDimensions,
+    onDimensionsChange,
+    isFullscreen,
+    onToggleFullscreen,
+    showExemplars,
+    onToggleShowExemplars,
+  } = useMetricsExperienceState();
   const onDimensionsSelectionChange = onDimensionsChangeProp ?? onDimensionsChange;
 
   const { euiTheme } = useEuiTheme();
@@ -62,6 +74,27 @@ export const useToolbarActions = ({
           metricItems={metricItems}
         />
       ),
+      <EuiFlexGroup
+        key="show-exemplars-toggle"
+        alignItems="center"
+        gutterSize="none"
+        responsive={false}
+        css={css`
+          height: 100%;
+        `}
+      >
+        <EuiFlexItem grow={false}>
+          <EuiSwitch
+            label={i18n.translate('metricsExperience.toolbar.showExemplarsLabel', {
+              defaultMessage: 'Related traces',
+            })}
+            checked={showExemplars}
+            onChange={onToggleShowExemplars}
+            compressed
+            data-test-subj="metricsExperienceToolbarShowExemplars"
+          />
+        </EuiFlexItem>
+      </EuiFlexGroup>,
     ],
     [
       isSmallScreen,
@@ -71,6 +104,8 @@ export const useToolbarActions = ({
       hideDimensionsSelector,
       isLoading,
       metricItems,
+      showExemplars,
+      onToggleShowExemplars,
     ]
   );
 

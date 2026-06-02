@@ -43,6 +43,7 @@ export const MetricsExperienceGrid = ({
   isTabSelected,
   breakdownField,
   onBreakdownFieldChange,
+  openTraceById,
 }: UnifiedMetricsGridProps) => {
   const {
     searchTerm,
@@ -196,6 +197,7 @@ export const MetricsExperienceGrid = ({
         histogramCss={histogramCss}
         isDiscoverLoading={isDiscoverLoading}
         isTabSelected={isTabSelected}
+        openTraceById={openTraceById}
       />
     </ChartsGrid>
   );
