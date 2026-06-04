@@ -598,4 +598,63 @@ describe('InternalStateStore', () => {
       }
     });
   });
+
+  describe('agent builder chart attachments', () => {
+    const buildAttachment = (id: string) => ({
+      id,
+      title: id,
+      esqlQuery: `TS metrics-* | WHERE metric == "${id}"`,
+      dimensions: [],
+    });
+
+    it('upserts and removes a chart attachment by id', async () => {
+      const { store } = await createTestStore();
+      const tabId = store.getState().tabs.unsafeCurrentId;
+
+      store.dispatch(
+        internalStateActions.upsertAgentBuilderChartAttachment({
+          tabId,
+          attachment: buildAttachment('chart-a'),
+        })
+      );
+      store.dispatch(
+        internalStateActions.upsertAgentBuilderChartAttachment({
+          tabId,
+          attachment: buildAttachment('chart-b'),
+        })
+      );
+      expect(selectTab(store.getState(), tabId).agentBuilderChartAttachments).toHaveLength(2);
+
+      store.dispatch(
+        internalStateActions.removeAgentBuilderChartAttachment({ tabId, id: 'chart-a' })
+      );
+
+      const remaining = selectTab(store.getState(), tabId).agentBuilderChartAttachments;
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].id).toBe('chart-b');
+    });
+
+    it('is a no-op when the id is not an existing chart attachment', async () => {
+      const { store } = await createTestStore();
+      const tabId = store.getState().tabs.unsafeCurrentId;
+
+      store.dispatch(
+        internalStateActions.upsertAgentBuilderChartAttachment({
+          tabId,
+          attachment: buildAttachment('chart-a'),
+        })
+      );
+
+      store.dispatch(
+        internalStateActions.removeAgentBuilderChartAttachment({
+          tabId,
+          id: 'esql-query-results',
+        })
+      );
+
+      const remaining = selectTab(store.getState(), tabId).agentBuilderChartAttachments;
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].id).toBe('chart-a');
+    });
+  });
 });

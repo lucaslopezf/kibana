@@ -110,6 +110,35 @@ export interface OpenInNewTabParams {
 }
 
 /**
+ * Parameters passed to the attach-chart-to-agent action.
+ *
+ * Describes a single ES|QL-backed chart whose query (and surrounding context)
+ * should be added to the Agent Builder chat panel as a context attachment.
+ */
+export interface AttachChartToAgentParams {
+  /**
+   * The fully-resolved ES|QL query that backs the chart.
+   */
+  esqlQuery: string;
+  /**
+   * Human-readable label for the chart (typically the metric name).
+   */
+  title: string;
+  /**
+   * Names of dimensions the chart is currently split by (may be empty).
+   */
+  dimensions: string[];
+  /**
+   * Time range used to fetch the chart, if available.
+   */
+  timeRange?: TimeRange;
+  /**
+   * Optional column metadata for the chart's query result, if already known.
+   */
+  columns?: Array<{ name: string; type: string }>;
+}
+
+/**
  * Supports customizing the chart (UnifiedHistogram) section in Discover
  */
 export type ChartSectionConfiguration<T extends object = object> =

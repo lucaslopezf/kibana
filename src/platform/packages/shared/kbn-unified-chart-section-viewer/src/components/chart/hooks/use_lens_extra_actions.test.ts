@@ -14,6 +14,7 @@ import {
   ACTION_COPY_TO_DASHBOARD,
   ACTION_VIEW_DETAILS,
   ACTION_EXPLORE_IN_DISCOVER_TAB,
+  ACTION_ATTACH_TO_AI_AGENT,
 } from '../../../common/constants';
 
 describe('useLensExtraActions', () => {
@@ -137,30 +138,79 @@ describe('useLensExtraActions', () => {
     });
   });
 
+  describe('attachToAiAgent', () => {
+    it('should return attachToAiAgent action when config is provided', () => {
+      const onClick = jest.fn();
+      const { result } = renderHook(() => useLensExtraActions({ attachToAiAgent: { onClick } }));
+
+      expect(result.current).toHaveLength(1);
+      const action = result.current[0];
+
+      expect(action).toEqual(
+        expect.objectContaining({
+          id: ACTION_ATTACH_TO_AI_AGENT,
+          order: 3,
+          type: 'actionButton',
+        })
+      );
+
+      expect(action.getIconType({} as ActionExecutionContext)).toBe('sparkles');
+    });
+
+    it('should call onClick when execute is invoked', async () => {
+      const onClick = jest.fn();
+      const { result } = renderHook(() => useLensExtraActions({ attachToAiAgent: { onClick } }));
+
+      const action = result.current[0];
+
+      await act(async () => {
+        await action.execute({} as ActionExecutionContext);
+      });
+
+      expect(onClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not be included when no handler is wired', () => {
+      const { result } = renderHook(() =>
+        useLensExtraActions({ viewDetails: { onClick: jest.fn() } })
+      );
+
+      expect(
+        result.current.find((action) => action.id === ACTION_ATTACH_TO_AI_AGENT)
+      ).toBeUndefined();
+    });
+  });
+
   describe('multiple actions', () => {
     it('should return all actions when all configs are provided', () => {
       const copyOnClick = jest.fn();
       const viewOnClick = jest.fn();
       const exploreOnClick = jest.fn();
+      const attachOnClick = jest.fn();
       const { result } = renderHook(() =>
         useLensExtraActions({
           copyToDashboard: { onClick: copyOnClick },
           viewDetails: { onClick: viewOnClick },
           exploreInDiscoverTab: { onClick: exploreOnClick },
+          attachToAiAgent: { onClick: attachOnClick },
         })
       );
 
-      expect(result.current).toHaveLength(3);
+      expect(result.current).toHaveLength(4);
 
       const copyAction = result.current.find((action) => action.id === ACTION_COPY_TO_DASHBOARD);
       const viewAction = result.current.find((action) => action.id === ACTION_VIEW_DETAILS);
       const exploreAction = result.current.find(
         (action) => action.id === ACTION_EXPLORE_IN_DISCOVER_TAB
       );
+      const attachAction = result.current.find(
+        (action) => action.id === ACTION_ATTACH_TO_AI_AGENT
+      );
 
       expect(copyAction).toBeDefined();
       expect(viewAction).toBeDefined();
       expect(exploreAction).toBeDefined();
+      expect(attachAction).toBeDefined();
     });
   });
 });

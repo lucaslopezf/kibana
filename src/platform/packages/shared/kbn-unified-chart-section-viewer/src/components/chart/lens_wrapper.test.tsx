@@ -301,6 +301,38 @@ describe('LensWrapper', () => {
     });
   });
 
+  describe('onAttachToAiAgent', () => {
+    it('passes the onAttachToAiAgent handler through to useLensExtraActions', () => {
+      const onAttachToAiAgent = jest.fn();
+
+      render(
+        <EuiThemeProvider>
+          <LensWrapper {...defaultProps} onAttachToAiAgent={onAttachToAiAgent} />
+        </EuiThemeProvider>
+      );
+
+      expect(useLensExtraActionsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          attachToAiAgent: { onClick: onAttachToAiAgent },
+        })
+      );
+    });
+
+    it('does not wire attachToAiAgent when no handler is provided', () => {
+      render(
+        <EuiThemeProvider>
+          <LensWrapper {...defaultProps} />
+        </EuiThemeProvider>
+      );
+
+      expect(useLensExtraActionsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          attachToAiAgent: undefined,
+        })
+      );
+    });
+  });
+
   describe('handleExploreInDiscoverTab', () => {
     function captureExploreHandler(): { handler: (() => void) | undefined } {
       const captured: { handler: (() => void) | undefined } = { handler: undefined };

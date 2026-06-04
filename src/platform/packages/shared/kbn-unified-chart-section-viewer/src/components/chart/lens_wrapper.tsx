@@ -28,6 +28,7 @@ export type LensWrapperProps = {
   onViewDetails?: () => void;
   onCopyToDashboard?: () => void;
   onExploreInDiscoverTab?: UnifiedMetricsGridProps['actions']['openInNewTab'];
+  onAttachToAiAgent?: () => void;
   syncTooltips?: boolean;
   syncCursor?: boolean;
   abortController: AbortController | undefined;
@@ -47,6 +48,7 @@ export function LensWrapper({
   onViewDetails,
   onCopyToDashboard,
   onExploreInDiscoverTab,
+  onAttachToAiAgent,
   syncTooltips,
   syncCursor,
   extraDisabledActions = [],
@@ -112,6 +114,7 @@ export function LensWrapper({
     exploreInDiscoverTab: onExploreInDiscoverTab
       ? { onClick: handleExploreInDiscoverTab }
       : undefined,
+    attachToAiAgent: onAttachToAiAgent ? { onClick: onAttachToAiAgent } : undefined,
   });
 
   const disabledActions = [...DEFAULT_DISABLED_ACTIONS, ...extraDisabledActions];

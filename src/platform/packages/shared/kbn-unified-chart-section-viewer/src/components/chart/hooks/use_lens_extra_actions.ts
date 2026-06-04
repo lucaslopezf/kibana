@@ -14,6 +14,7 @@ import {
   ACTION_COPY_TO_DASHBOARD,
   ACTION_VIEW_DETAILS,
   ACTION_EXPLORE_IN_DISCOVER_TAB,
+  ACTION_ATTACH_TO_AI_AGENT,
 } from '../../../common/constants';
 
 interface ActionEventHandler {
@@ -24,6 +25,7 @@ interface UseLensExtraActions {
   copyToDashboard?: ActionEventHandler;
   viewDetails?: ActionEventHandler;
   exploreInDiscoverTab?: ActionEventHandler;
+  attachToAiAgent?: ActionEventHandler;
 }
 export const useLensExtraActions = (config: UseLensExtraActions): Action[] => {
   const extraActions = useMemo(() => {
@@ -41,11 +43,16 @@ export const useLensExtraActions = (config: UseLensExtraActions): Action[] => {
       actions.push(getExploreInDiscoverTabAction(config.exploreInDiscoverTab.onClick));
     }
 
+    if (config.attachToAiAgent?.onClick) {
+      actions.push(getAttachToAiAgentAction(config.attachToAiAgent.onClick));
+    }
+
     return actions;
   }, [
     config.copyToDashboard?.onClick,
     config.viewDetails?.onClick,
     config.exploreInDiscoverTab?.onClick,
+    config.attachToAiAgent?.onClick,
   ]);
 
   return extraActions;
@@ -107,6 +114,28 @@ const getCopyToDashboardAction = (onExecute: () => void): Action => {
     },
     getIconType() {
       return 'addToDashboard';
+    },
+    async isCompatible() {
+      return true;
+    },
+    async execute() {
+      onExecute();
+    },
+  };
+};
+
+const getAttachToAiAgentAction = (onExecute: () => void): Action => {
+  return {
+    id: ACTION_ATTACH_TO_AI_AGENT,
+    order: 3,
+    type: 'actionButton',
+    getDisplayName() {
+      return i18n.translate('metricsExperience.lens.actions.attachToAiAgent', {
+        defaultMessage: 'Attach to AI Agent',
+      });
+    },
+    getIconType() {
+      return 'sparkles';
     },
     async isCompatible() {
       return true;

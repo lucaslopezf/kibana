@@ -39,6 +39,10 @@ const esqlQueryResultsDataSchema = z.object({
   totalHits: z.number(),
   timeRange: timeRangeSchema.optional(),
   playbookContribution: playbookContributionSchema.optional(),
+  // Optional human-readable title for the attachment (e.g. metric name for
+  // per-chart attachments). Surfaced in the chat pill label and in the
+  // formatted text representation passed to the agent.
+  title: z.string().optional(),
 });
 
 type EsqlQueryResultsData = z.infer<typeof esqlQueryResultsDataSchema>;
@@ -84,6 +88,9 @@ const createEsqlQueryResultsAttachmentType = (): AttachmentTypeDefinition => {
 const formatQueryResultsData = (data: EsqlQueryResultsData): string => {
   const lines: string[] = [];
 
+  if (data.title) {
+    lines.push(`Chart: ${data.title}`);
+  }
   lines.push(`ES|QL Query: ${data.query}`);
   lines.push(`Total Results: ${data.totalHits}`);
   if (data.timeRange) {

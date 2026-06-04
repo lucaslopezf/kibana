@@ -12,6 +12,7 @@ import { internalStateSlice, syncLocallyPersistedTabState } from './internal_sta
 import * as actions from './actions';
 
 export {
+  type AgentBuilderChartAttachment,
   type DiscoverInternalState,
   type TabState,
   type TabStateGlobalState,

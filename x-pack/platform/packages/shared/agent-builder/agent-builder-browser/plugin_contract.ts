@@ -97,6 +97,13 @@ export interface EmbeddableConversationProps {
    * ```
    */
   browserApiTools?: Array<BrowserApiToolDefinition<any>>;
+
+  /**
+   * Called when the user removes an attachment from the conversation input
+   * (clicks the X on a pill). Lets a host (e.g. Discover) keep its own source
+   * of truth in sync so it does not re-push the removed attachment.
+   */
+  onAttachmentRemoved?: (attachmentId: string) => void;
 }
 
 /**

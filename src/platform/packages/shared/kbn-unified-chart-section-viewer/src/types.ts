@@ -20,6 +20,18 @@ interface ChartSectionActions {
     timeRange?: TimeRange;
   }) => void;
   updateESQLQuery?: (queryOrUpdater: string | ((prevQuery: string) => string)) => void;
+  /**
+   * Attach a single chart to the AI Agent (Agent Builder) chat panel.
+   * Provided by the host (e.g. Discover) when the AI Agent integration is
+   * available; absent otherwise so the chart UI can hide the action.
+   */
+  attachChartToAgent?: (params: {
+    esqlQuery: string;
+    title: string;
+    dimensions: string[];
+    timeRange?: TimeRange;
+    columns?: Array<{ name: string; type: string }>;
+  }) => void;
 }
 
 export interface UnifiedMetricsGridProps extends ChartSectionProps {

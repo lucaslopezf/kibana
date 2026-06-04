@@ -22,6 +22,7 @@ interface EsqlResultsData {
   sampleRows: Array<Record<string, unknown>>;
   totalHits: number;
   timeRange?: { from: string; to: string };
+  title?: string;
 }
 
 const getEsqlResultsData = (attachment: AttachmentInput): EsqlResultsData =>
@@ -214,5 +215,35 @@ describe('buildEsqlResultsAttachment', () => {
     const { sampleRows } = getEsqlResultsData(attachment);
     expect(sampleRows[0]).toEqual({ status: 'ok' });
     expect(sampleRows[0]).not.toHaveProperty('missing_field');
+  });
+
+  it('omits title when not provided', () => {
+    const attachment = buildEsqlResultsAttachment(
+      'FROM logs-* | LIMIT 10',
+      baseColumns,
+      baseRows,
+      500,
+      { from: 'now-24h', to: 'now' }
+    );
+
+    expect(getEsqlResultsData(attachment)).not.toHaveProperty('title');
+  });
+
+  it('sets title on data when provided', () => {
+    const attachment = buildEsqlResultsAttachment(
+      'FROM logs-* | LIMIT 10',
+      baseColumns,
+      baseRows,
+      500,
+      { from: 'now-24h', to: 'now' },
+      undefined,
+      'esql-chart-activemq.broker.consumers.count',
+      'activemq.broker.consumers.count by host'
+    );
+
+    expect(attachment.id).toBe('esql-chart-activemq.broker.consumers.count');
+    expect(getEsqlResultsData(attachment).title).toBe(
+      'activemq.broker.consumers.count by host'
+    );
   });
 });

@@ -47,6 +47,7 @@ export const Chart = ({
   onFilter,
   onViewDetails,
   onExploreInDiscoverTab,
+  onAttachToAiAgent,
   fetchParams,
   discoverFetch$,
   titleHighlight,
@@ -108,6 +109,7 @@ export const Chart = ({
             onViewDetails={onViewDetails}
             onCopyToDashboard={toggleSaveModalVisible}
             onExploreInDiscoverTab={onExploreInDiscoverTab}
+            onAttachToAiAgent={onAttachToAiAgent}
             syncCursor={syncCursor}
             titleHighlight={titleHighlight}
             syncTooltips={syncTooltips}

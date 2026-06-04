@@ -10,7 +10,9 @@
 import type { DataView } from '@kbn/data-views-plugin/common';
 import type { DataTableRecord } from '@kbn/discover-utils';
 import type { DocViewFilterFn } from '@kbn/unified-doc-viewer/types';
-import type { OpenInNewTabParams, UpdateESQLQueryFn } from './types';
+import type { AttachChartToAgentParams, OpenInNewTabParams, UpdateESQLQueryFn } from './types';
+
+export type { AttachChartToAgentParams };
 
 /**
  * Host-provided actions that profiles can use in extension point implementations.
@@ -43,6 +45,14 @@ export interface ContextAwarenessToolkitActions {
    * Opens or updates the expanded document flyout.
    */
   setExpandedDoc?: (record?: DataTableRecord, options?: { initialTabId?: string }) => void;
+  /**
+   * Attaches a single ES|QL-backed chart to the Agent Builder chat panel.
+   *
+   * Only provided when the Agent Builder integration is available on the host.
+   * Consumers that surface UI controls for this action should hide them when
+   * the function is absent.
+   */
+  attachChartToAgent?: (params: AttachChartToAgentParams) => void;
 }
 
 /**

@@ -202,14 +202,20 @@ export const EmbeddableConversationsProvider: React.FC<EmbeddableConversationsPr
     }));
   }, []);
 
-  const removeAttachment = useCallback((attachmentIndex: number) => {
+  // Keep the latest host callback in a ref: `removeAttachment` has empty deps
+  // so reading `currentProps.onAttachmentRemoved` directly would be stale.
+  const onAttachmentRemovedRef = useRef(currentProps.onAttachmentRemoved);
+  onAttachmentRemovedRef.current = currentProps.onAttachmentRemoved;
+
+  const removeAttachment = useCallback((attachmentId: string) => {
     setCurrentProps((prevProps) => {
       if (!prevProps.attachments) return prevProps;
       return {
         ...prevProps,
-        attachments: removeAttachmentFromList(prevProps.attachments, attachmentIndex),
+        attachments: removeAttachmentFromList(prevProps.attachments, attachmentId),
       };
     });
+    onAttachmentRemovedRef.current?.(attachmentId);
   }, []);
 
   const setAgentId = useCallback((id: string) => {

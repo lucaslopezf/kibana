@@ -93,10 +93,10 @@ export const RoutedConversationsProvider: React.FC<RoutedConversationsProviderPr
     setAttachments(undefined);
   }, []);
 
-  const removeAttachment = useCallback((attachmentIndex: number) => {
+  const removeAttachment = useCallback((attachmentId: string) => {
     setAttachments((prev) => {
       if (!prev) return prev;
-      return removeAttachmentFromList(prev, attachmentIndex);
+      return removeAttachmentFromList(prev, attachmentId);
     });
   }, []);
 

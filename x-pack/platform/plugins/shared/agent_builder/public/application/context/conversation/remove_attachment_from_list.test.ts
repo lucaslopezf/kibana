@@ -22,36 +22,41 @@ const group = (id: string): AttachmentGroup => ({
 });
 
 describe('removeAttachmentFromList', () => {
-  it('removes the item at the given index', () => {
+  it('removes the attachment with the given id', () => {
     const list = [attachment('a'), attachment('b'), attachment('c')];
-    expect(removeAttachmentFromList(list, 1)).toEqual([attachment('a'), attachment('c')]);
+    expect(removeAttachmentFromList(list, 'b')).toEqual([attachment('a'), attachment('c')]);
   });
 
-  it('removes an AttachmentGroup at the given index (entire group removed)', () => {
+  it('removes an AttachmentGroup with the given id', () => {
     const g = group('g1');
     const list = [attachment('a'), g, attachment('c')];
-    expect(removeAttachmentFromList(list, 1)).toEqual([attachment('a'), attachment('c')]);
+    expect(removeAttachmentFromList(list, 'g1')).toEqual([attachment('a'), attachment('c')]);
   });
 
-  it('removes the first item', () => {
+  it('removes the first item by id', () => {
     const list = [attachment('a'), attachment('b'), attachment('c')];
-    expect(removeAttachmentFromList(list, 0)).toEqual([attachment('b'), attachment('c')]);
+    expect(removeAttachmentFromList(list, 'a')).toEqual([attachment('b'), attachment('c')]);
   });
 
-  it('removes the last item', () => {
+  it('removes the last item by id', () => {
     const list = [attachment('a'), attachment('b'), attachment('c')];
-    expect(removeAttachmentFromList(list, 2)).toEqual([attachment('a'), attachment('b')]);
+    expect(removeAttachmentFromList(list, 'c')).toEqual([attachment('a'), attachment('b')]);
   });
 
-  it('returns all items unchanged when index is out of bounds', () => {
+  it('returns all items unchanged when no attachment has the given id', () => {
     const list = [attachment('a'), attachment('b')];
-    expect(removeAttachmentFromList(list, 99)).toEqual(list);
+    expect(removeAttachmentFromList(list, 'missing')).toEqual(list);
+  });
+
+  it('ignores attachments without an id (they are never removable)', () => {
+    const list = [attachment(undefined), attachment('b')];
+    expect(removeAttachmentFromList(list, 'b')).toEqual([attachment(undefined)]);
   });
 
   it('does not mutate the input array', () => {
     const list = [attachment('a'), attachment('b')];
     const snapshot = JSON.stringify(list);
-    removeAttachmentFromList(list, 0);
+    removeAttachmentFromList(list, 'a');
     expect(JSON.stringify(list)).toBe(snapshot);
   });
 });

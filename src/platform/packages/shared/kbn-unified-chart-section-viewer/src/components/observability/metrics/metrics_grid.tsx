@@ -25,6 +25,7 @@ import { useGridNavigation } from '../../../hooks/use_grid_navigation';
 import { FieldsMetadataProvider } from '../../../context/fields_metadata';
 import { createESQLQuery, firstNonNullable, getMetricUniqueKey } from '../../../common/utils';
 import {
+  ACTION_ATTACH_TO_AI_AGENT,
   ACTION_COPY_TO_DASHBOARD,
   ACTION_EXPLORE_IN_DISCOVER_TAB,
   ACTION_OPEN_IN_DISCOVER,
@@ -39,6 +40,7 @@ const METRICS_QUICK_ACTION_IDS: QuickActionIds = [
   ACTION_INSPECT_PANEL,
   ACTION_VIEW_DETAILS,
   ACTION_COPY_TO_DASHBOARD,
+  ACTION_ATTACH_TO_AI_AGENT,
 ];
 
 export type MetricsGridProps = Pick<
@@ -320,6 +322,25 @@ const ChartItem = React.memo(
       [index, esqlQuery, metricItem, onViewDetails]
     );
 
+    const attachChartToAgent = actions.attachChartToAgent;
+    const handleAttachToAiAgent = useMemo(() => {
+      if (!attachChartToAgent || !esqlQuery) return undefined;
+      return () => {
+        attachChartToAgent({
+          esqlQuery,
+          title: metricItem.metricName,
+          dimensions: applicableDimensions.map((dim) => dim.name),
+          timeRange: fetchParams.timeRange,
+        });
+      };
+    }, [
+      attachChartToAgent,
+      esqlQuery,
+      metricItem.metricName,
+      applicableDimensions,
+      fetchParams.timeRange,
+    ]);
+
     return (
       <A11yGridCell
         id={id}
@@ -340,6 +361,7 @@ const ChartItem = React.memo(
           onFilter={onFilter}
           onExploreInDiscoverTab={actions.openInNewTab}
           onViewDetails={handleViewDetailsCallback}
+          onAttachToAiAgent={handleAttachToAiAgent}
           title={metricItem.metricName}
           description={description}
           chartLayers={chartLayers}

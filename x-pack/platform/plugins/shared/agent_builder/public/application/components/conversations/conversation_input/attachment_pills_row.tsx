@@ -53,13 +53,19 @@ export const AttachmentPillsRow: React.FC<AttachmentPillsRowProps> = ({
             <EuiFlexItem key={attachment.id} grow={false}>
               <AttachmentGroupPill
                 group={attachment}
-                onRemove={removable ? () => removeAttachment?.(index) : undefined}
+                onRemove={removable ? () => removeAttachment?.(attachment.id) : undefined}
               />
             </EuiFlexItem>
           );
         }
 
         const attachmentId = attachment.id ?? `${attachment.type}-${index}`;
+        // Only allow removal when the attachment carries a real id — otherwise
+        // we can't safely target it in the source list (the index-based fallback
+        // we use for the React key here would not line up with the unfiltered
+        // attachments list owned by the conversation provider).
+        const onRemoveAttachment =
+          removable && attachment.id ? () => removeAttachment?.(attachment.id!) : undefined;
         return (
           <EuiFlexItem key={attachmentId} grow={false}>
             <AttachmentPill
@@ -70,7 +76,7 @@ export const AttachmentPillsRow: React.FC<AttachmentPillsRowProps> = ({
                 hidden: attachment.hidden,
                 origin: attachment.origin,
               }}
-              onRemoveAttachment={removable ? () => removeAttachment?.(index) : undefined}
+              onRemoveAttachment={onRemoveAttachment}
             />
           </EuiFlexItem>
         );

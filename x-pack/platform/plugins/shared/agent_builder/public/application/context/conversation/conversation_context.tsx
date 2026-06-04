@@ -22,7 +22,7 @@ interface ConversationContextValue {
   attachments?: ConversationAttachment[];
   upsertAttachments?: (attachments: ConversationAttachment[]) => void;
   resetAttachments?: () => void;
-  removeAttachment?: (attachmentIndex: number) => void;
+  removeAttachment?: (attachmentId: string) => void;
   browserApiTools?: Array<BrowserApiToolDefinition<any>>;
   setConversationId?: (conversationId?: string) => void;
   setAgentId?: (agentId: string) => void;

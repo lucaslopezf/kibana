@@ -17,14 +17,21 @@ const MAX_QUERY_LABEL_LENGTH = 60;
 /**
  * Registers the browser-side UI definition for the custom `esql.query_results` attachment type.
  * This controls how the attachment pill appears in the agent-builder chat:
- * - Label shows the truncated ES|QL query (e.g. "ES|QL results: from kibana_sample_data_logs")
- * - Icon uses the data table icon (visTable)
- *
+ * - When `data.title` is set (e.g. per-chart attachments from the metrics grid)
+ *   the label uses it verbatim so each chip is identifiable at a glance.
+ * - Otherwise it falls back to the truncated ES|QL query
+ *   (e.g. "ES|QL results: from kibana_sample_data_logs").
+ * - Icon uses the data table icon (visTable).
  */
 export const registerEsqlResultsAttachmentUi = (agentBuilder: AgentBuilderPluginStart) => {
   agentBuilder.attachments.addAttachmentType(ESQL_QUERY_RESULTS_ATTACHMENT_TYPE, {
     getLabel: (attachment: Attachment) => {
-      const query = (attachment.data as { query?: string })?.query;
+      const data = attachment.data as { query?: string; title?: string } | undefined;
+      const title = data?.title;
+      if (title) {
+        return title;
+      }
+      const query = data?.query;
       if (query) {
         const truncated =
           query.length > MAX_QUERY_LABEL_LENGTH

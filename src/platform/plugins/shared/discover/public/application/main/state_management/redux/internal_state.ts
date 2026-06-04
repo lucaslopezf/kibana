@@ -45,6 +45,7 @@ import { createContextAwarenessToolkit } from './context_awareness_toolkit';
 import {
   DEFAULT_PROFILE_STATE_FIELDS,
   TabsBarVisibility,
+  type AgentBuilderChartAttachment,
   type DefaultProfileStateField,
   type DiscoverInternalState,
   type ProfileStateSnapshot,
@@ -538,6 +539,34 @@ export const internalStateSlice = createSlice({
         tab.uiState.cascadedDocumentsDataGridMap[action.payload.nodeId] =
           action.payload.dataGridUiState;
       }),
+
+    upsertAgentBuilderChartAttachment: (
+      state,
+      action: TabAction<{ attachment: AgentBuilderChartAttachment }>
+    ) =>
+      withTab(state, action.payload, (tab) => {
+        // Defensive default for tabs hydrated before this field existed.
+        tab.agentBuilderChartAttachments ??= [];
+        const next = action.payload.attachment;
+        const existingIndex = tab.agentBuilderChartAttachments.findIndex(
+          (item) => item.id === next.id
+        );
+        if (existingIndex === -1) {
+          tab.agentBuilderChartAttachments.push(next);
+        } else {
+          tab.agentBuilderChartAttachments[existingIndex] = next;
+        }
+      }),
+
+    removeAgentBuilderChartAttachment: (state, action: TabAction<{ id: string }>) =>
+      withTab(state, action.payload, (tab) => {
+        if (!tab.agentBuilderChartAttachments) return;
+        // No-op when the id is not a chart attachment (e.g. the passive
+        // `esql-query-results` chip), since it won't be in the list.
+        tab.agentBuilderChartAttachments = tab.agentBuilderChartAttachments.filter(
+          (item) => item.id !== action.payload.id
+        );
+      }),
   },
   extraReducers: (builder) => {
     builder.addCase(loadDataViewList.fulfilled, (state, action) => {
@@ -759,6 +788,7 @@ export const createInternalStateStore = (
       return createContextAwarenessToolkit({
         internalState,
         tabId,
+        isAgentBuilderAvailable: Boolean(options.services.agentBuilder),
       });
     },
     getCascadedDocumentsStateManager: (tabId) => {

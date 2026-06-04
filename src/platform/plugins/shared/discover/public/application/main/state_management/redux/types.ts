@@ -220,6 +220,35 @@ export interface TabState extends TabItem {
   expandedDocOwner: string | undefined;
   renderDocumentViewMeta: RenderDocumentViewMeta | undefined;
   initialDocViewerTabId?: string;
+  /**
+   * Charts that the user has explicitly attached to the Agent Builder chat
+   * panel for this tab. Stored here so they survive the passive
+   * `setChatConfig` updates from `DiscoverAgentBuilderConfig`.
+   *
+   * The list is upserted by `id` so re-clicking the action on the same chart
+   * does not create duplicates.
+   */
+  agentBuilderChartAttachments: AgentBuilderChartAttachment[];
+}
+
+/**
+ * A single chart attachment that Discover keeps in sync with the Agent Builder
+ * chat panel. The fields mirror what we need to rebuild an
+ * `esql.query_results` agent-builder attachment for that chart.
+ */
+export interface AgentBuilderChartAttachment {
+  /** Stable id used to upsert/replace the attachment in the chat panel. */
+  id: string;
+  /** Human-readable label for the chart (typically the metric name). */
+  title: string;
+  /** Fully-resolved ES|QL query that backs the chart. */
+  esqlQuery: string;
+  /** Names of the dimensions the chart is split by (may be empty). */
+  dimensions: string[];
+  /** Time range used to fetch the chart, if available. */
+  timeRange?: TimeRange;
+  /** Column metadata for the chart's query result, if already known. */
+  columns?: Array<{ name: string; type: string }>;
 }
 
 export interface RecentlyClosedTabState extends TabState {
