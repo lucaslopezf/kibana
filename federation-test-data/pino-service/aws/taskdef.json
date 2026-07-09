@@ -1,0 +1,25 @@
+{
+  "family": "__PREFIX__-pino-logger",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "runtimePlatform": { "cpuArchitecture": "X86_64", "operatingSystemFamily": "LINUX" },
+  "executionRoleArn": "arn:aws:iam::__ACCOUNT__:role/__PREFIX__-ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "pino",
+      "image": "__ACCOUNT__.dkr.ecr.__REGION__.amazonaws.com/__PREFIX__-pino-logger:latest",
+      "essential": true,
+      "environment": [{ "name": "INTERVAL_MS", "value": "150" }],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/__PREFIX__/federation-test-pino",
+          "awslogs-region": "__REGION__",
+          "awslogs-stream-prefix": "pino"
+        }
+      }
+    }
+  ]
+}

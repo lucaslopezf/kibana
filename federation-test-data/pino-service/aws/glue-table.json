@@ -1,0 +1,22 @@
+{
+  "Name": "logs_cloudwatch_pino_parquet",
+  "TableType": "EXTERNAL_TABLE",
+  "Parameters": { "classification": "parquet" },
+  "StorageDescriptor": {
+    "Columns": [
+      { "Name": "level", "Type": "int" },
+      { "Name": "time", "Type": "bigint" },
+      { "Name": "pid", "Type": "int" },
+      { "Name": "hostname", "Type": "string" },
+      { "Name": "svc", "Type": "string" },
+      { "Name": "reqid", "Type": "string" },
+      { "Name": "status", "Type": "int" },
+      { "Name": "durationms", "Type": "int" },
+      { "Name": "msg", "Type": "string" }
+    ],
+    "Location": "s3://__BUCKET__/pino-parquet/",
+    "InputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat",
+    "OutputFormat": "org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat",
+    "SerdeInfo": { "SerializationLibrary": "org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe" }
+  }
+}

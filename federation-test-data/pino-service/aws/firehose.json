@@ -1,0 +1,26 @@
+{
+  "RoleARN": "arn:aws:iam::__ACCOUNT__:role/__PREFIX__-firehose-to-s3-role",
+  "BucketARN": "arn:aws:s3:::__BUCKET__",
+  "Prefix": "pino-parquet/",
+  "ErrorOutputPrefix": "pino-parquet-errors/",
+  "BufferingHints": { "SizeInMBs": 64, "IntervalInSeconds": 60 },
+  "CompressionFormat": "UNCOMPRESSED",
+  "ProcessingConfiguration": {
+    "Enabled": true,
+    "Processors": [
+      { "Type": "Decompression", "Parameters": [{ "ParameterName": "CompressionFormat", "ParameterValue": "GZIP" }] },
+      { "Type": "CloudWatchLogProcessing", "Parameters": [{ "ParameterName": "DataMessageExtraction", "ParameterValue": "true" }] }
+    ]
+  },
+  "DataFormatConversionConfiguration": {
+    "Enabled": true,
+    "InputFormatConfiguration": { "Deserializer": { "OpenXJsonSerDe": {} } },
+    "OutputFormatConfiguration": { "Serializer": { "ParquetSerDe": {} } },
+    "SchemaConfiguration": {
+      "RoleARN": "arn:aws:iam::__ACCOUNT__:role/__PREFIX__-firehose-to-s3-role",
+      "DatabaseName": "__PREFIX_US___federation",
+      "TableName": "logs_cloudwatch_pino_parquet",
+      "Region": "__REGION__"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "pino-logger",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Emits native pino-shaped application logs for the federation CloudWatch->Firehose->S3 native-data test",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "pino": "^9.5.0"
+  }
+}
