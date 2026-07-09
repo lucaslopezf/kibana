@@ -7,7 +7,7 @@
  * License v3.0 only", or the "Server Side Public License, v 1".
  */
 
-// Minimal service that emits realistic application logs using pino's native
+// Minimal service that emits realistic application logs using pino's native output shape.
 // Runs on ECS Fargate; stdout is captured by the awslogs driver -> CloudWatch Logs.
 const pino = require('pino');
 

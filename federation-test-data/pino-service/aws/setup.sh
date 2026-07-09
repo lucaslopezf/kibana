@@ -83,6 +83,18 @@ aws iam attach-role-policy --role-name "${PREFIX}-ecsTaskExecutionRole" \
   --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
 echo "   (waiting for IAM propagation)"; sleep 10
 
+echo "== 2b. IAM read-only user for the Elasticsearch data_source =="
+cat > "$TMP/s3-read.json" <<JSON
+{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:ListBucket","s3:GetBucketLocation"],"Resource":["arn:aws:s3:::${BUCKET}","arn:aws:s3:::${BUCKET}/*"]}]}
+JSON
+aws iam create-user --user-name "${PREFIX}-federation-reader" >/dev/null 2>&1 || true
+aws iam put-user-policy --user-name "${PREFIX}-federation-reader" --policy-name s3-read \
+  --policy-document "file://$TMP/s3-read.json"
+READER_KEYS=""
+if [ -z "$(aws iam list-access-keys --user-name "${PREFIX}-federation-reader" --query 'AccessKeyMetadata[0].AccessKeyId' --output text 2>/dev/null | grep -v None)" ]; then
+  READER_KEYS="$(aws iam create-access-key --user-name "${PREFIX}-federation-reader" --query 'AccessKey.[AccessKeyId,SecretAccessKey]' --output text)"
+fi
+
 echo "== 3. CloudWatch log group =="
 aws logs create-log-group --log-group-name "/${PREFIX}/federation-test-pino" --region "$REGION" 2>/dev/null || true
 
@@ -132,15 +144,31 @@ aws logs put-subscription-filter \
   --role-arn "arn:aws:iam::${ACCOUNT}:role/${PREFIX}-cwl-to-firehose-role" --region "$REGION"
 
 rm -rf "$TMP"
+
+if [ -n "$READER_KEYS" ]; then
+  READER_AK="$(echo "$READER_KEYS" | awk '{print $1}')"
+  READER_SK="$(echo "$READER_KEYS" | awk '{print $2}')"
+  READER_MSG="reader access key (store securely, do NOT commit):
+  access_key = ${READER_AK}
+  secret_key = ${READER_SK}"
+else
+  READER_MSG="reader user ${PREFIX}-federation-reader already had an access key; create a new one if needed."
+fi
+
 cat <<EOF
 
 == Done ==
 Data lands (after ~60s buffering) at: s3://${BUCKET}/pino-parquet/**
 
-Register it in Elasticsearch (needs an S3-readable data_source; use a read-only IAM key):
+${READER_MSG}
+
+Register the data_source + dataset in Elasticsearch:
+
+  PUT _query/data_source/${PREFIX}_s3
+  { "type": "s3", "settings": { "region": "${REGION}", "access_key": "<access_key>", "secret_key": "<secret_key>" } }
 
   PUT _query/dataset/logs-cloudwatch-pino-parquet
-  { "data_source": "<your_s3_data_source>",
+  { "data_source": "${PREFIX}_s3",
     "resource": "s3://${BUCKET}/pino-parquet/**",
     "settings": { "format": "parquet" } }
 
