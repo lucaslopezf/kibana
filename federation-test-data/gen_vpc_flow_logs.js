@@ -5,9 +5,9 @@
  * a federation dataset (the date-picker gap PoC).
  *
  * Real AWS delivery path (non-hive, "native"):
- *   AWSLogs/<account>/vpcflowlogs/<region>/<YYYY>/<MM>/<DD>/<file>.log[.gz]
+ *   AWSLogs/<account>/vpcflowlogs/<region>/<YYYY>/<MM>/<DD>/<file>.csv[.gz]
  * Hive-compatible option AWS also offers:
- *   AWSLogs/<account>/vpcflowlogs/<region>/year=<YYYY>/month=<MM>/day=<DD>/<file>.log[.gz]
+ *   AWSLogs/<account>/vpcflowlogs/<region>/year=<YYYY>/month=<MM>/day=<DD>/<file>.csv[.gz]
  *
  * Records use the default v2 VPC flow log fields (space-delimited, header on line 1):
  *   version account-id interface-id srcaddr dstaddr srcport dstport protocol
@@ -25,7 +25,7 @@
  *   DAYS             days per month to emit   (default "1,15")
  *   RECORDS_PER_DAY  flow records per file    (default 500)
  *   LAYOUT           native | hive            (default native)
- *   GZIP             true | false             (default false -> plain .log)
+ *   GZIP             true | false             (default false -> plain .csv)
  *
  * Example:
  *   START=2024-01-01 END=2026-07-01 LAYOUT=native node gen_vpc_flow_logs.js
@@ -68,7 +68,11 @@ const PROTOCOLS = [6, 6, 6, 17, 1]; // weighted toward tcp
 const ACTIONS = ['ACCEPT', 'ACCEPT', 'ACCEPT', 'REJECT']; // mostly accept
 const ENIS = Array.from({ length: 8 }, () => `eni-${crypto.randomBytes(8).toString('hex')}`);
 
-const ip = (prefixes) => `${pick(prefixes)}${randInt(1, 254)}`;
+const ip = (prefixes) => {
+  const prefix = pick(prefixes); // ends with '.'
+  const need = 4 - prefix.split('.').filter(Boolean).length;
+  return prefix + Array.from({ length: need }, () => randInt(1, 254)).join('.');
+};
 
 const flowLine = (startSec) => {
   const endSec = startSec + randInt(1, 60);
@@ -140,7 +144,7 @@ for (const [year, month] of monthsBetween(START, END)) {
 
     const stamp = `${year}${pad2(month)}${pad2(day)}T0000Z`;
     const hash = crypto.randomBytes(4).toString('hex');
-    const baseName = `${ACCOUNT}_vpcflowlogs_${REGION}_fl-${hash}_${stamp}_${hash}.log`;
+    const baseName = `${ACCOUNT}_vpcflowlogs_${REGION}_fl-${hash}_${stamp}_${hash}.csv`;
     const fileName = GZIP ? `${baseName}.gz` : baseName;
     const outPath = path.join(dir, fileName);
 

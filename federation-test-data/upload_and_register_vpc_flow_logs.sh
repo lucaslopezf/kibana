@@ -4,9 +4,11 @@
 # folder layout, and register it as federation datasets. This is the data side of
 # the date-picker / partition-pruning PoC.
 #
-# Creates two datasets so we can compare partitioning styles:
-#   - <prefix>-vpc-native : AWS default layout .../<region>/<YYYY>/<MM>/<DD>/  (partition_path template)
-#   - <prefix>-vpc-hive   : hive-compatible   .../<region>/year=.../month=.../day=.../ (partition_detection=hive)
+# Creates four datasets so we can compare partitioning styles + formats + the pruning gap:
+#   - <prefix>-vpc-native        : AWS default layout .../<region>/<YYYY>/<MM>/<DD>/  (partition_path template, CSV)
+#   - <prefix>-vpc-hive          : hive-compatible   .../<region>/year=.../month=.../day=.../ (partition_detection=hive, CSV)
+#   - <prefix>-vpc-hive-parquet  : same hive layout but Parquet files (matches the documented FDS example)
+#   - <prefix>-vpc-parquet-oneday: Parquet, resource scoped to a single day -> positive pruning control
 #
 #   PREFIX=lucaslopezf REGION=eu-north-1 ./upload_and_register_vpc_flow_logs.sh
 #
@@ -14,6 +16,7 @@
 #   - valid aws login (STS credentials in the default profile) for the target account
 #   - local ES up at http://localhost:9200 (elastic:changeme)
 #   - node available (to run gen_vpc_flow_logs.js)
+#   - duckdb CLI available (to convert the hive CSV into partitioned Parquet)
 #
 # NOTE on data span: defaults cover 2024-01 .. 2026-07 (2 days/month) so the dataset
 # intentionally spans multiple years -- that's what exercises "accidentally query
@@ -37,6 +40,15 @@ GZIP="${GZIP:-false}"
 
 DS_NATIVE="${PREFIX}-vpc-native"
 DS_HIVE="${PREFIX}-vpc-hive"
+DS_HIVE_PARQUET="${PREFIX}-vpc-hive-parquet"
+DS_ONEDAY="${PREFIX}-vpc-parquet-oneday"
+
+# Control dataset scoped to a single partition folder (positive pruning control):
+# reads only that one day's file, proving the storage layer CAN read a subset -- the
+# WHERE-on-partition-columns path just doesn't. Defaults to the last day in the range.
+ONEDAY_YEAR="${ONEDAY_YEAR:-2026}"
+ONEDAY_MONTH="${ONEDAY_MONTH:-07}"
+ONEDAY_DAY="${ONEDAY_DAY:-01}"
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$here"
@@ -63,27 +75,40 @@ OUT_DIR=./vpc-flow-logs-hive LAYOUT=hive ACCOUNT="$ACCOUNT" REGION="$REGION" \
   START="$START" END="$END" DAYS="$DAYS" RECORDS_PER_DAY="$RECORDS_PER_DAY" GZIP="$GZIP" \
   node gen_vpc_flow_logs.js
 
+echo "== 1b. Convert the hive CSV into partitioned Parquet (DuckDB) =="
+# Same hive layout, but Parquet files. Partition columns (year/month/day) come from the
+# folder path only (WRITE_PARTITION_COLUMNS false), exactly like the CSV datasets.
+PARQUET_BASE="./vpc-hive-parquet/AWSLogs/${ACCOUNT}/vpcflowlogs/${REGION}"
+rm -rf ./vpc-hive-parquet
+mkdir -p "$PARQUET_BASE"
+duckdb -c "
+COPY (
+  SELECT * FROM read_csv('vpc-flow-logs-hive/**/*.csv', delim=' ', header=true, hive_partitioning=true)
+) TO '${PARQUET_BASE}'
+  (FORMAT PARQUET, PARTITION_BY (year, month, day), WRITE_PARTITION_COLUMNS false, OVERWRITE_OR_IGNORE, FILENAME_PATTERN 'part_{uuid}');
+"
+
 echo "== 2. Upload to S3 =="
 aws s3 cp ./vpc-flow-logs-native "s3://${BUCKET}/vpc-native/" --recursive
 aws s3 cp ./vpc-flow-logs-hive "s3://${BUCKET}/vpc-hive/" --recursive
+aws s3 cp ./vpc-hive-parquet "s3://${BUCKET}/vpc-hive-parquet/" --recursive
 
 echo "== 3. Create/update data_source (STS credentials from the current profile) =="
 CREDS_JSON="$(aws configure export-credentials --format process)"
-ACCESS_KEY="$(echo "$CREDS_JSON" | python3 -c 'import sys,json;print(json.load(sys.stdin)["AccessKeyId"])')"
-SECRET_KEY="$(echo "$CREDS_JSON" | python3 -c 'import sys,json;print(json.load(sys.stdin)["SecretAccessKey"])')"
-SESSION_TOKEN="$(echo "$CREDS_JSON" | python3 -c 'import sys,json;print(json.load(sys.stdin)["SessionToken"])')"
-
-curl -s -u "$ES_USER:$ES_PASS" -X PUT "$ES/_query/data_source/my_s3" \
-  -H 'content-type: application/json' \
-  -d "$(python3 - "$REGION" "$ACCESS_KEY" "$SECRET_KEY" "$SESSION_TOKEN" <<'PY'
-import json, sys
-region, ak, sk, st = sys.argv[1:5]
+CREDS_JSON="$CREDS_JSON" REGION="$REGION" python3 -c '
+import json, os
+c = json.loads(os.environ["CREDS_JSON"])
 print(json.dumps({
     "type": "s3",
-    "settings": {"region": region, "access_key": ak, "secret_key": sk, "session_token": st},
+    "settings": {
+        "region": os.environ["REGION"],
+        "access_key": c["AccessKeyId"],
+        "secret_key": c["SecretAccessKey"],
+        "session_token": c["SessionToken"],
+    },
 }))
-PY
-)" -w '\n-> HTTP %{http_code}\n'
+' | curl -s -u "$ES_USER:$ES_PASS" -X PUT "$ES/_query/data_source/my_s3" \
+  -H 'content-type: application/json' --data @- -w '\n-> HTTP %{http_code}\n'
 
 echo "== 4. Create datasets =="
 # Native AWS layout: bare year/month/day folders -> partition_path template.
@@ -99,8 +124,22 @@ curl -s -u "$ES_USER:$ES_PASS" -X PUT "$ES/_query/dataset/${DS_HIVE}" \
   -d "{\"data_source\":\"my_s3\",\"resource\":\"s3://${BUCKET}/vpc-hive/AWSLogs/${ACCOUNT}/vpcflowlogs/${REGION}/**\",\"settings\":{\"format\":\"csv\",\"delimiter\":\" \",\"header_row\":true,\"partition_detection\":\"hive\"}}" \
   -w "\n-> ${DS_HIVE}: HTTP %{http_code}\n"
 
+# Same hive layout, Parquet files -> format=parquet (no delimiter/header_row). Matches the docs example.
+curl -s -u "$ES_USER:$ES_PASS" -X PUT "$ES/_query/dataset/${DS_HIVE_PARQUET}" \
+  -H 'content-type: application/json' \
+  -d "{\"data_source\":\"my_s3\",\"resource\":\"s3://${BUCKET}/vpc-hive-parquet/AWSLogs/${ACCOUNT}/vpcflowlogs/${REGION}/**/*.parquet\",\"settings\":{\"format\":\"parquet\",\"partition_detection\":\"hive\"}}" \
+  -w "\n-> ${DS_HIVE_PARQUET}: HTTP %{http_code}\n"
+
+# Positive pruning control: resource scoped to a single day's folder. A plain COUNT(*)
+# here reads only that one file (~500 docs), vs the full dataset reading 31000 for the
+# equivalent WHERE year/month/day filter -> shows a bounded read IS possible.
+curl -s -u "$ES_USER:$ES_PASS" -X PUT "$ES/_query/dataset/${DS_ONEDAY}" \
+  -H 'content-type: application/json' \
+  -d "{\"data_source\":\"my_s3\",\"resource\":\"s3://${BUCKET}/vpc-hive-parquet/AWSLogs/${ACCOUNT}/vpcflowlogs/${REGION}/year=${ONEDAY_YEAR}/month=${ONEDAY_MONTH}/day=${ONEDAY_DAY}/**/*.parquet\",\"settings\":{\"format\":\"parquet\",\"partition_detection\":\"hive\"}}" \
+  -w "\n-> ${DS_ONEDAY}: HTTP %{http_code}\n"
+
 echo "== 5. Validate =="
-for name in "$DS_NATIVE" "$DS_HIVE"; do
+for name in "$DS_NATIVE" "$DS_HIVE" "$DS_HIVE_PARQUET"; do
   echo "--- FROM \"${name}\" | LIMIT 2 ---"
   curl -s -u "$ES_USER:$ES_PASS" -X POST "$ES/_query" \
     -H 'content-type: application/json' \
@@ -111,19 +150,23 @@ done
 cat <<EOF
 
 == Done ==
-Datasets:  ${DS_NATIVE}  (partition_path)   |   ${DS_HIVE}  (hive)
+Datasets:
+  ${DS_NATIVE}        (partition_path, csv)
+  ${DS_HIVE}          (hive, csv)
+  ${DS_HIVE_PARQUET}  (hive, parquet)
+  ${DS_ONEDAY}        (hive, parquet, resource scoped to ${ONEDAY_YEAR}/${ONEDAY_MONTH}/${ONEDAY_DAY}) -- pruning control
 
-Try in Discover (note: date picker is disabled over federation -> filter by partitions):
+Show the pruning gap (measure cold -> re-run ./renew_sts.sh before each; read documents_found):
 
-  -- WRONG (independent >= is not a date range): don't do this
-  FROM "${DS_HIVE}" | WHERE year >= 2026 AND month >= 6 AND day >= 10
+  -- (A) filter one day over the FULL dataset -> COUNT=500 but documents_found=31000 (reads everything)
+  FROM "${DS_HIVE_PARQUET}"
+  | WHERE year == ${ONEDAY_YEAR} AND month == ${ONEDAY_MONTH} AND day == ${ONEDAY_DAY}
+  | STATS c = COUNT(*)
 
-  -- CORRECT "from a date onwards" over partition columns:
-  FROM "${DS_HIVE}"
-  | WHERE year > ?year
-       OR (year == ?year AND month > ?month)
-       OR (year == ?year AND month == ?month AND day >= ?day)
-  | LIMIT 100
+  -- (B) same one day, but resource scoped -> COUNT=500 AND documents_found=500 (reads only that folder)
+  FROM "${DS_ONEDAY}" | STATS c = COUNT(*)
 
-Reminder: STS credentials expire in ~1h; re-run step 3 (or this whole script) when they do.
+A vs B return the same rows; A reads 62x more -> the WHERE on partition columns is not pruned.
+
+Reminder: STS credentials expire in ~1h; re-run ./renew_sts.sh (or this whole script) when they do.
 EOF
