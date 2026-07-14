@@ -1,0 +1,17 @@
+{
+  "RoleARN": "arn:aws:iam::__ACCOUNT__:role/__PREFIX__-firehose-to-s3-role",
+  "BucketARN": "arn:aws:s3:::__BUCKET__",
+  "Prefix": "pino-json/",
+  "ErrorOutputPrefix": "pino-json-errors/",
+  "BufferingHints": { "SizeInMBs": 64, "IntervalInSeconds": 60 },
+  "CompressionFormat": "UNCOMPRESSED",
+  "FileExtension": ".ndjson",
+  "ProcessingConfiguration": {
+    "Enabled": true,
+    "Processors": [
+      { "Type": "Decompression", "Parameters": [{ "ParameterName": "CompressionFormat", "ParameterValue": "GZIP" }] },
+      { "Type": "CloudWatchLogProcessing", "Parameters": [{ "ParameterName": "DataMessageExtraction", "ParameterValue": "true" }] },
+      { "Type": "AppendDelimiterToRecord", "Parameters": [{ "ParameterName": "Delimiter", "ParameterValue": "\\n" }] }
+    ]
+  }
+}

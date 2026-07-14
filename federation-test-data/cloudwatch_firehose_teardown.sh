@@ -46,11 +46,13 @@ echo "== 1. Delete CloudWatch subscription filters =="
 run aws logs delete-subscription-filter --log-group-name "$LOG_GROUP" --filter-name "${PREFIX}-cw-to-firehose" --region "$REGION"
 run aws logs delete-subscription-filter --log-group-name "$LOG_GROUP" --filter-name "${PREFIX}-cw-to-firehose-parquet" --region "$REGION"
 run aws logs delete-subscription-filter --log-group-name "$LOG_GROUP_PINO" --filter-name "${PREFIX}-pino-to-firehose" --region "$REGION"
+run aws logs delete-subscription-filter --log-group-name "$LOG_GROUP_PINO" --filter-name "${PREFIX}-pino-to-firehose-json" --region "$REGION"
 
 echo "== 2. Delete Firehose delivery streams =="
 run aws firehose delete-delivery-stream --delivery-stream-name "${PREFIX}-cw-logs-to-s3" --region "$REGION"
 run aws firehose delete-delivery-stream --delivery-stream-name "${PREFIX}-cw-logs-to-s3-parquet" --region "$REGION"
 run aws firehose delete-delivery-stream --delivery-stream-name "${PREFIX}-cw-pino-parquet" --region "$REGION"
+run aws firehose delete-delivery-stream --delivery-stream-name "${PREFIX}-cw-pino-json" --region "$REGION"
 
 echo "== 3. Delete Lambda =="
 run aws lambda delete-function --function-name "${PREFIX}-cw-transform" --region "$REGION"
@@ -70,8 +72,9 @@ run aws iam delete-role-policy --role-name "${PREFIX}-firehose-to-s3-role" --pol
 run aws iam delete-role-policy --role-name "${PREFIX}-firehose-to-s3-role" --policy-name parquet-extras
 run aws iam delete-role-policy --role-name "${PREFIX}-firehose-to-s3-role" --policy-name "${PREFIX}-firehose-glue"
 run aws iam delete-role --role-name "${PREFIX}-firehose-to-s3-role"
-# cwl-to-firehose-role: inline firehose-put
+# cwl-to-firehose-role: inline firehose-put (+ firehose-put-json from add_json_variant.sh)
 run aws iam delete-role-policy --role-name "${PREFIX}-cwl-to-firehose-role" --policy-name firehose-put
+run aws iam delete-role-policy --role-name "${PREFIX}-cwl-to-firehose-role" --policy-name firehose-put-json
 run aws iam delete-role --role-name "${PREFIX}-cwl-to-firehose-role"
 # lambda-transform-role: managed AWSLambdaBasicExecutionRole
 run aws iam detach-role-policy --role-name "${PREFIX}-lambda-transform-role" --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
