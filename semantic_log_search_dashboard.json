@@ -410,7 +410,7 @@
         "type": "data_table",
         "data_source": {
           "type": "esql",
-          "query": "FROM metrics-* | WHERE @timestamp <= ?_tend AND @timestamp > ?_tstart AND metrics.kibana.logs.semantic_search.requests IS NOT NULL AND attributes.outcome NOT IN (\"success\", \"empty\") | STATS searches = SUM(TO_LONG(metrics.kibana.logs.semantic_search.requests)) BY outcome = attributes.outcome, reason = attributes.reason, phase = attributes.failure_phase | SORT searches DESC"
+          "query": "SET unmapped_fields=\"nullify\"; FROM metrics-* | WHERE @timestamp <= ?_tend AND @timestamp > ?_tstart AND metrics.kibana.logs.semantic_search.requests IS NOT NULL AND attributes.outcome NOT IN (\"success\", \"empty\") | STATS searches = SUM(TO_LONG(metrics.kibana.logs.semantic_search.requests)) BY outcome = attributes.outcome, reason = attributes.reason, phase = attributes.failure_phase | SORT searches DESC"
         },
         "metrics": [
           {
