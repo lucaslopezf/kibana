@@ -743,67 +743,31 @@ describe('SessionDetailPage', () => {
     expect(await screen.findByTestId('digitalExperienceSessionsRail')).toBeInTheDocument();
   });
 
-  it('shows the sessions list on the right when asked, and remembers it', async () => {
+  it('shows the sessions list in a push flyout, on the right when asked, and remembers it', async () => {
     mockDetail.mockResolvedValue(detail());
     renderPage();
-
-    await screen.findByTestId('digitalExperienceSessionsRail');
-    expect(screen.getByTestId('digitalExperienceSessionSplitView')).toHaveAttribute(
-      'data-rail-side',
-      'left'
-    );
-
-    await openSessionsListMenu();
-    fireEvent.click(screen.getByTestId('digitalExperienceSessionsListPlacement-right'));
-
-    expect(screen.getByTestId('digitalExperienceSessionSplitView')).toHaveAttribute(
-      'data-rail-side',
-      'right'
-    );
-    // After the session, in the layout.
-    expect(
-      screen
-        .getByTestId('digitalExperienceSessionPage')
-        .compareDocumentPosition(await screen.findByTestId('digitalExperienceSessionsRail'))
-    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-    expect(window.localStorage.getItem('digitalExperience.sessionDetail.rail')).toBe('"right"');
-  });
-
-  it('turns the list into a flyout, and back beside the session', async () => {
-    mockChrome.getChromeStyle.mockReturnValue('project');
-    mockDetail.mockResolvedValue(detail());
-    renderPage();
-
-    await screen.findByTestId('digitalExperienceSessionsRail');
-    expect(mockChrome.sideNav.setIsCollapsed).toHaveBeenLastCalledWith(true);
-
-    fireEvent.click(screen.getByTestId('digitalExperienceSessionsRailFlyoutToggle'));
 
     const flyout = await screen.findByTestId('digitalExperienceSessionsFlyout');
     expect(within(flyout).getByTestId('digitalExperienceSessionsRail')).toBeInTheDocument();
-    expect(screen.queryByTestId('digitalExperienceSessionSplitView')).not.toBeInTheDocument();
-    expect(window.localStorage.getItem('digitalExperience.sessionDetail.rail')).toBe('"flyout"');
-    // A flyout leaves the side navigation as the user had it.
-    expect(mockChrome.sideNav.setIsCollapsed).toHaveBeenLastCalledWith(false);
-
-    fireEvent.click(screen.getByTestId('digitalExperienceSessionsRailFlyoutToggle'));
-
-    expect(await screen.findByTestId('digitalExperienceSessionSplitView')).toBeInTheDocument();
-    expect(screen.queryByTestId('digitalExperienceSessionsFlyout')).not.toBeInTheDocument();
-    mockChrome.getChromeStyle.mockReturnValue('classic');
-  });
-
-  it('keeps the list and the session as they are when the list moves, or becomes a flyout', async () => {
-    mockDetail.mockResolvedValue(detail());
-    renderPage();
-    const search = (await screen.findByTestId(
-      'digitalExperienceSessionsRailSearch'
-    )) as HTMLInputElement;
+    expect(flyout).toHaveAttribute('data-rail-side', 'left');
 
     await openSessionsListMenu();
     fireEvent.click(screen.getByTestId('digitalExperienceSessionsListPlacement-right'));
-    fireEvent.click(screen.getByTestId('digitalExperienceSessionsRailFlyoutToggle'));
-    await screen.findByTestId('digitalExperienceSessionsFlyout');
+
+    expect(screen.getByTestId('digitalExperienceSessionsFlyout')).toHaveAttribute(
+      'data-rail-side',
+      'right'
+    );
+    expect(window.localStorage.getItem('digitalExperience.sessionDetail.rail')).toBe('"right"');
+  });
+
+  it('keeps the list as it is when it moves to the other side', async () => {
+    mockDetail.mockResolvedValue(detail());
+    renderPage();
+    const search = await screen.findByTestId('digitalExperienceSessionsRailSearch');
+
+    await openSessionsListMenu();
+    fireEvent.click(screen.getByTestId('digitalExperienceSessionsListPlacement-right'));
 
     // The same input, not a new one, and neither request has run again.
     expect(screen.getByTestId('digitalExperienceSessionsRailSearch')).toBe(search);
@@ -816,40 +780,19 @@ describe('SessionDetailPage', () => {
     mockDetail.mockResolvedValue(detail());
     renderPage();
 
-    await screen.findByTestId('digitalExperienceSessionsRail');
-    expect(screen.getByTestId('digitalExperienceSessionSplitView')).toHaveAttribute(
+    expect(await screen.findByTestId('digitalExperienceSessionsFlyout')).toHaveAttribute(
       'data-rail-side',
       'left'
     );
   });
 
-  it('collapses the project side navigation while the list shows, and restores it', async () => {
+  it('leaves the side navigation as the user had it', async () => {
     mockChrome.getChromeStyle.mockReturnValue('project');
     mockDetail.mockResolvedValue(detail());
     renderPage();
 
     await screen.findByTestId('digitalExperienceSessionsRail');
-    expect(mockChrome.sideNav.setIsCollapsed).toHaveBeenLastCalledWith(true);
-
-    fireEvent.click(screen.getByTestId('digitalExperienceSessionsRailHide'));
-    expect(mockChrome.sideNav.setIsCollapsed).toHaveBeenLastCalledWith(false);
-    mockChrome.getChromeStyle.mockReturnValue('classic');
-  });
-
-  it('restores the project side navigation when the page is reloaded with the list open', async () => {
-    mockChrome.getChromeStyle.mockReturnValue('project');
-    mockDetail.mockResolvedValue(detail());
-    renderPage();
-
-    await screen.findByTestId('digitalExperienceSessionsRail');
-    expect(mockChrome.sideNav.setIsCollapsed).toHaveBeenLastCalledWith(true);
-
-    // The chrome keeps a collapsed navigation as the user's choice, so it has to be restored
-    // before the page goes away, not only when the list is hidden.
-    act(() => {
-      window.dispatchEvent(new Event('pagehide'));
-    });
-    expect(mockChrome.sideNav.setIsCollapsed).toHaveBeenLastCalledWith(false);
+    expect(mockChrome.sideNav.setIsCollapsed).not.toHaveBeenCalled();
     mockChrome.getChromeStyle.mockReturnValue('classic');
   });
 

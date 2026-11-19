@@ -46,7 +46,6 @@ import {
   type SessionSignalId,
 } from '../../../utils/describe_session';
 import { formatSessionDuration } from '../../../utils/format_session_duration';
-import type { RailPlacement } from './session_split_view';
 import { pickSessionsListQuery } from '../../../utils/sessions_list_query';
 import { MAX_LISTED_SESSIONS } from '../../sessions/components/sessions_table';
 import { useSessionsList } from '../../sessions/hooks/sessions_list_request';
@@ -64,21 +63,6 @@ const TITLE = i18n.translate('xpack.digitalExperience.sessionDetail.rail.title',
 const HIDE_LABEL = i18n.translate('xpack.digitalExperience.sessionDetail.rail.hide', {
   defaultMessage: 'Hide the sessions list',
 });
-
-const OPEN_AS_FLYOUT_LABEL = i18n.translate('xpack.digitalExperience.sessionDetail.rail.asFlyout', {
-  defaultMessage: 'Show as a flyout',
-});
-
-const DOCK_LABEL = i18n.translate('xpack.digitalExperience.sessionDetail.rail.dock', {
-  defaultMessage: 'Show beside the session',
-});
-
-const hideIconOf = (placement: RailPlacement): string => {
-  if (placement === 'flyout') {
-    return 'cross';
-  }
-  return placement === 'right' ? 'transitionRightOut' : 'transitionLeftOut';
-};
 
 const PREVIOUS_PAGE_LABEL = i18n.translate(
   'xpack.digitalExperience.sessionDetail.rail.previousPage',
@@ -258,21 +242,15 @@ export function SessionsRail({
   serviceName,
   sessionId,
   source,
-  placement,
+  side,
   onHide,
-  onToggleFlyout,
-  headerHeight,
 }: {
   serviceName: string;
   sessionId: string;
   source: ApplicationSource;
-  /** Where the list shows, which its hide button points to. */
-  placement: Exclude<RailPlacement, 'hidden'>;
+  /** The side of the session the list shows on, which its hide button points to. */
+  side: 'left' | 'right';
   onHide: () => void;
-  /** Turns the list from beside the session into a flyout, or back. */
-  onToggleFlyout: () => void;
-  /** The height of the session's page header, which the list's header matches. */
-  headerHeight?: number;
 }) {
   const { euiTheme } = useEuiTheme();
   const { timeZone, formatNumber } = useFormatters();
@@ -314,14 +292,12 @@ export function SessionsRail({
       data-test-subj="digitalExperienceSessionsRail"
       css={css({ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 })}
     >
-      {/* As tall as the session's header, so that their bottom borders line up. */}
       <div
         css={css({
           boxSizing: 'border-box',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          minHeight: headerHeight,
           padding: `${euiTheme.size.s} ${euiTheme.size.m}`,
           borderBottom: euiTheme.border.thin,
         })}
@@ -341,26 +317,9 @@ export function SessionsRail({
           )}
           <EuiFlexItem />
           <EuiFlexItem grow={false}>
-            <EuiToolTip
-              content={placement === 'flyout' ? DOCK_LABEL : OPEN_AS_FLYOUT_LABEL}
-              disableScreenReaderOutput
-            >
-              <EuiButtonIcon
-                iconType={placement === 'flyout' ? 'pin' : 'menuRight'}
-                aria-label={placement === 'flyout' ? DOCK_LABEL : OPEN_AS_FLYOUT_LABEL}
-                onClick={onToggleFlyout}
-                data-test-subj="digitalExperienceSessionsRailFlyoutToggle"
-                {...getEbtProps({
-                  action: DIGITAL_EXPERIENCE_EBT_ACTIONS.TOGGLE_SESSIONS_LIST,
-                  element: SESSIONS_EBT_ELEMENTS.RAIL_FLYOUT,
-                })}
-              />
-            </EuiToolTip>
-          </EuiFlexItem>
-          <EuiFlexItem grow={false}>
             <EuiToolTip content={HIDE_LABEL} disableScreenReaderOutput>
               <EuiButtonIcon
-                iconType={hideIconOf(placement)}
+                iconType={side === 'right' ? 'transitionRightOut' : 'transitionLeftOut'}
                 aria-label={HIDE_LABEL}
                 onClick={onHide}
                 data-test-subj="digitalExperienceSessionsRailHide"
